@@ -6,7 +6,7 @@
     <title>聚宝盆风控技术研究室自研系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -237,7 +237,7 @@
     </footer>
 
     <script>
-        // 全局变量（确保API地址正确）
+        // 全局变量
         let goldChart, silverChart, goldWinRateChart, silverWinRateChart;
         const API_BASE_URL = "https://precious-metal-analyzer.aoyouios.workers.dev";
 
@@ -336,23 +336,26 @@
             return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
 
-        // 更新价格图表（优先保证价格显示）
+        // 更新价格图表
         function updatePriceCharts(historyData) {
             try {
                 if (!historyData?.gold || !historyData?.silver) return;
-                goldChart.data.labels = historyData.gold.map(item => formatTime(item.time));
-                goldChart.data.datasets[0].data = historyData.gold.map(item => parseFloat(item.price));
+                // 只取最近20条数据（避免图表拥挤）
+                const recentGold = historyData.gold.slice(-20);
+                const recentSilver = historyData.silver.slice(-20);
+                goldChart.data.labels = recentGold.map(item => formatTime(item.time));
+                goldChart.data.datasets[0].data = recentGold.map(item => parseFloat(item.price));
                 goldChart.update();
 
-                silverChart.data.labels = historyData.silver.map(item => formatTime(item.time));
-                silverChart.data.datasets[0].data = historyData.silver.map(item => parseFloat(item.price));
+                silverChart.data.labels = recentSilver.map(item => formatTime(item.time));
+                silverChart.data.datasets[0].data = recentSilver.map(item => parseFloat(item.price));
                 silverChart.update();
             } catch (error) {
                 console.error("图表更新失败：", error);
             }
         }
 
-        // 更新当前价格（核心：先显示价格）
+        // 更新当前价格
         function updateCurrentInfo(currentData) {
             try {
                 if (!currentData) return;
@@ -364,23 +367,30 @@
             }
         }
 
-        // 更新操作建议（有数据才更新，无数据不覆盖）
+        // 更新操作建议
         function updateLatestAdvice(advice) {
             try {
-                if (!advice) return;
+                if (!advice) {
+                    // 无数据时显示默认建议
+                    document.getElementById('gold-strategy').textContent = '持有';
+                    document.getElementById('gold-reason').textContent = '等待数据积累（首次加载）';
+                    document.getElementById('silver-strategy').textContent = '持有';
+                    document.getElementById('silver-reason').textContent = '等待数据积累（首次加载）';
+                    return;
+                }
                 // 黄金建议
-                document.getElementById('gold-strategy').textContent = advice.gold?.advice || '--';
-                document.getElementById('gold-entry-price').textContent = advice.gold?.entryPrice || '--';
+                document.getElementById('gold-strategy').textContent = advice.gold?.advice || '持有';
+                document.getElementById('gold-entry-price').textContent = advice.gold?.entryPrice || document.getElementById('gold-current-price').textContent.split(' ')[0];
                 document.getElementById('gold-take-profit').textContent = advice.gold?.takeProfit || '--';
                 document.getElementById('gold-stop-loss').textContent = advice.gold?.stopLoss || '--';
-                document.getElementById('gold-reason').textContent = advice.gold?.reason || '数据加载中';
+                document.getElementById('gold-reason').textContent = advice.gold?.reason || '指标分析中';
 
                 // 白银建议
-                document.getElementById('silver-strategy').textContent = advice.silver?.advice || '--';
-                document.getElementById('silver-entry-price').textContent = advice.silver?.entryPrice || '--';
+                document.getElementById('silver-strategy').textContent = advice.silver?.advice || '持有';
+                document.getElementById('silver-entry-price').textContent = advice.silver?.entryPrice || document.getElementById('silver-current-price').textContent.split(' ')[0];
                 document.getElementById('silver-take-profit').textContent = advice.silver?.takeProfit || '--';
                 document.getElementById('silver-stop-loss').textContent = advice.silver?.stopLoss || '--';
-                document.getElementById('silver-reason').textContent = advice.silver?.reason || '数据加载中';
+                document.getElementById('silver-reason').textContent = advice.silver?.reason || '指标分析中';
             } catch (error) {
                 console.error("建议更新失败：", error);
             }
@@ -391,13 +401,16 @@
             try {
                 const tableBody = document.getElementById('prediction-table');
                 tableBody.innerHTML = '';
+                
                 if (!history || history.length === 0) {
+                    // 无历史数据时显示提示
                     const row = document.createElement('tr');
-                    row.innerHTML = '<td colspan="5" class="px-6 py-12 text-center text-gray-500">暂无历史数据</td>';
+                    row.innerHTML = '<td colspan="5" class="px-6 py-12 text-center text-gray-500">暂无历史数据（每小时更新一条）</td>';
                     tableBody.appendChild(row);
                     return;
                 }
 
+                // 倒序显示（最新在前）
                 const reversedHistory = [...history].reverse();
                 reversedHistory.forEach(item => {
                     const time = new Date(item.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -412,7 +425,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="${item.goldResult?.includes('✓') ? 'text-success' : item.goldResult?.includes('✗') ? 'text-danger' : 'text-gray-500'}">
-                                ${item.goldResult || '--'}
+                                ${item.goldResult || '待验证'}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -422,7 +435,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="${item.silverResult?.includes('✓') ? 'text-success' : item.silverResult?.includes('✗') ? 'text-danger' : 'text-gray-500'}">
-                                ${item.silverResult || '--'}
+                                ${item.silverResult || '待验证'}
                             </span>
                         </td>
                     `;
@@ -436,76 +449,77 @@
         // 更新胜率统计
         function updateWinRate(rate) {
             try {
-                if (!rate) return;
-                document.getElementById('gold-win-rate-value').textContent = `${rate.gold || 0}%`;
-                goldWinRateChart.data.datasets[0].data = [rate.gold || 0, 100 - (rate.gold || 0)];
+                const goldRate = rate?.gold || 0;
+                const silverRate = rate?.silver || 0;
+                document.getElementById('gold-win-rate-value').textContent = `${goldRate}%`;
+                goldWinRateChart.data.datasets[0].data = [goldRate, 100 - goldRate];
                 goldWinRateChart.update();
 
-                document.getElementById('silver-win-rate-value').textContent = `${rate.silver || 0}%`;
-                silverWinRateChart.data.datasets[0].data = [rate.silver || 0, 100 - (rate.silver || 0)];
+                document.getElementById('silver-win-rate-value').textContent = `${silverRate}%`;
+                silverWinRateChart.data.datasets[0].data = [silverRate, 100 - silverRate];
                 silverWinRateChart.update();
             } catch (error) {
                 console.error("胜率更新失败：", error);
             }
         }
 
-        // 加载所有数据（优先保证价格显示）
-        async function loadAllData() {
+        // 主动触发生成建议（如果没有）
+        async function ensureAdviceExists() {
             try {
-                // 1. 优先加载价格数据（确保至少能看到价格）
-                let currentData, historyData;
-                try {
-                    const currentRes = await fetch(`${API_BASE_URL}/data`);
-                    currentData = await currentRes.json();
-                    updateCurrentInfo(currentData); // 立即更新价格
-                } catch (error) {
-                    console.error("价格数据加载失败：", error);
-                    document.getElementById('update-time').textContent = `价格加载失败，请刷新重试`;
-                }
+                const adviceRes = await fetch(`${API_BASE_URL}/advice`);
+                const latestAdvice = await adviceRes.json();
+                if (latestAdvice.gold) return latestAdvice;
 
-                // 2. 加载历史价格（用于图表）
-                try {
-                    const historyRes = await fetch(`${API_BASE_URL}/history`);
-                    historyData = await historyRes.json();
-                    updatePriceCharts(historyData);
-                } catch (error) {
-                    console.error("历史数据加载失败：", error);
-                }
-
-                // 3. 加载建议数据（非核心，失败不影响价格显示）
-                try {
-                    const adviceRes = await fetch(`${API_BASE_URL}/advice`);
-                    const latestAdvice = await adviceRes.json();
-                    updateLatestAdvice(latestAdvice);
-                } catch (error) {
-                    console.error("建议数据加载失败：", error);
-                }
-
-                // 4. 加载历史建议和胜率（非核心）
-                try {
-                    const [adviceHistoryRes, winRateRes] = await Promise.all([
-                        fetch(`${API_BASE_URL}/advice-history`),
-                        fetch(`${API_BASE_URL}/win-rate`)
-                    ]);
-                    const adviceHistory = await adviceHistoryRes.json();
-                    const winRate = await winRateRes.json();
-                    updatePredictionTable(adviceHistory);
-                    updateWinRate(winRate);
-                } catch (error) {
-                    console.error("历史建议/胜率加载失败：", error);
-                }
-
+                // 无建议时主动触发
+                console.log("主动生成建议...");
+                await fetch(`${API_BASE_URL}/generate-advice-now`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const newAdviceRes = await fetch(`${API_BASE_URL}/advice`);
+                return newAdviceRes.json();
             } catch (error) {
-                console.error("全局加载错误：", error);
-                document.getElementById('update-time').textContent = `数据加载失败：${error.message}`;
+                console.error("主动生成建议失败：", error);
+                return null;
             }
         }
 
-        // 页面加载后立即执行，优先显示价格
+        // 加载所有数据
+        async function loadAllData() {
+            try {
+                // 1. 加载价格数据（优先）
+                const currentRes = await fetch(`${API_BASE_URL}/data`);
+                const currentData = await currentRes.json();
+                updateCurrentInfo(currentData);
+
+                // 2. 加载历史价格
+                const historyRes = await fetch(`${API_BASE_URL}/history`);
+                const historyData = await historyRes.json();
+                updatePriceCharts(historyData);
+
+                // 3. 加载建议数据（带主动触发）
+                const latestAdvice = await ensureAdviceExists();
+                updateLatestAdvice(latestAdvice);
+
+                // 4. 加载建议历史和胜率
+                const adviceHistoryRes = await fetch(`${API_BASE_URL}/advice-history`);
+                const adviceHistory = await adviceHistoryRes.json();
+                updatePredictionTable(adviceHistory);
+
+                const winRateRes = await fetch(`${API_BASE_URL}/win-rate`);
+                const winRate = await winRateRes.json();
+                updateWinRate(winRate);
+
+            } catch (error) {
+                console.error("加载错误：", error);
+                document.getElementById('update-time').textContent = `部分数据加载失败：${error.message}`;
+            }
+        }
+
+        // 页面加载后初始化
         document.addEventListener('DOMContentLoaded', function() {
             initCharts();
-            loadAllData(); // 首次加载
-            setInterval(loadAllData, 180000); // 每3分钟刷新
+            loadAllData();
+            // 每3分钟刷新
+            setInterval(loadAllData, 180000);
         });
     </script>
 </body>
