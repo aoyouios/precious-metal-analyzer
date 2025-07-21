@@ -65,7 +65,6 @@
                 </button>
             </div>
         </div>
-        <!-- 移动端菜单 -->
         <div id="mobile-menu" class="hidden md:hidden bg-primary">
             <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
                 <a href="#charts" class="py-2 hover:bg-primary/80 transition px-3 rounded">价格图表</a>
@@ -77,7 +76,6 @@
     </nav>
 
     <main class="container mx-auto px-4 py-8">
-        <!-- 价格更新时间 -->
         <div class="mb-6 text-center text-sm text-gray-500">
             <span id="update-time">数据加载中...</span>
         </div>
@@ -85,7 +83,6 @@
         <!-- 价格图表 -->
         <section id="charts" class="mb-12">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- 黄金图表 -->
                 <div class="bg-white rounded-xl p-6 card-shadow">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold flex items-center">
@@ -98,8 +95,6 @@
                         <canvas id="gold-chart"></canvas>
                     </div>
                 </div>
-
-                <!-- 白银图表 -->
                 <div class="bg-white rounded-xl p-6 card-shadow">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold flex items-center">
@@ -123,7 +118,6 @@
                     智能操作建议（每小时更新）
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- 黄金建议 -->
                     <div class="border border-primary/20 rounded-lg p-4 bg-primary/5">
                         <h3 class="font-bold text-primary mb-3 flex items-center">
                             <i class="fa fa-btc mr-2"></i>
@@ -134,11 +128,9 @@
                             <p><span class="font-semibold">进场价格：</span> <span id="gold-entry-price">--</span> 元/克</p>
                             <p><span class="font-semibold">止盈点位：</span> <span id="gold-take-profit" class="text-success">--</span> 元/克</p>
                             <p><span class="font-semibold">止损点位：</span> <span id="gold-stop-loss" class="text-danger">--</span> 元/克</p>
-                            <p><span class="font-semibold">分析依据：</span> <span id="gold-reason">MACD+KDJ指标综合判断（数据加载中）</span></p>
+                            <p><span class="font-semibold">分析依据：</span> <span id="gold-reason">数据加载中</span></p>
                         </div>
                     </div>
-                    
-                    <!-- 白银建议 -->
                     <div class="border border-secondary/20 rounded-lg p-4 bg-secondary/5">
                         <h3 class="font-bold text-secondary mb-3 flex items-center">
                             <i class="fa fa-money mr-2"></i>
@@ -149,7 +141,7 @@
                             <p><span class="font-semibold">进场价格：</span> <span id="silver-entry-price">--</span> 元/克</p>
                             <p><span class="font-semibold">止盈点位：</span> <span id="silver-take-profit" class="text-success">--</span> 元/克</p>
                             <p><span class="font-semibold">止损点位：</span> <span id="silver-stop-loss" class="text-danger">--</span> 元/克</p>
-                            <p><span class="font-semibold">分析依据：</span> <span id="silver-reason">MACD+KDJ指标综合判断（数据加载中）</span></p>
+                            <p><span class="font-semibold">分析依据：</span> <span id="silver-reason">数据加载中</span></p>
                         </div>
                     </div>
                 </div>
@@ -175,7 +167,6 @@
                             </tr>
                         </thead>
                         <tbody id="prediction-table" class="bg-white divide-y divide-gray-200">
-                            <!-- 初始加载状态 -->
                             <tr class="animate-pulse">
                                 <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                                     <i class="fa fa-spinner fa-spin mr-2"></i>加载历史预测数据中...
@@ -195,7 +186,6 @@
                     预测胜率统计（近24小时）
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- 黄金胜率 -->
                     <div class="bg-primary/5 rounded-lg p-4 border border-primary/20">
                         <h3 class="font-bold text-primary mb-3 flex items-center">
                             <i class="fa fa-btc mr-2"></i>
@@ -211,8 +201,6 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 白银胜率 -->
                     <div class="bg-secondary/5 rounded-lg p-4 border border-secondary/20">
                         <h3 class="font-bold text-secondary mb-3 flex items-center">
                             <i class="fa fa-money mr-2"></i>
@@ -259,14 +247,12 @@
     </footer>
 
     <script>
-        // 全局变量
         let goldChart, silverChart, goldWinRateChart, silverWinRateChart;
-        const API_BASE_URL = "https://precious-metal-analyzer.aoyouios.workers.dev"; // 你的Workers域名
+        const API_BASE_URL = "https://precious-metal-analyzer.aoyouios.workers.dev";
 
         // 移动端菜单切换
         document.getElementById('menu-toggle').addEventListener('click', function() {
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('hidden');
+            document.getElementById('mobile-menu').classList.toggle('hidden');
         });
 
         // 初始化图表
@@ -275,178 +261,69 @@
             const goldCtx = document.getElementById('gold-chart').getContext('2d');
             goldChart = new Chart(goldCtx, {
                 type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: '工行纸黄金(元/克)',
-                        data: [],
-                        borderColor: '#165DFF',
-                        backgroundColor: 'rgba(22, 93, 255, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { maxRotation: 0, maxTicksLimit: 8 }
-                        },
-                        y: {
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                            ticks: { callback: (v) => v + ' 元' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: { label: (ctx) => `价格: ${ctx.raw} 元/克` }
-                        }
-                    }
-                }
+                data: { labels: [], datasets: [{ label: '工行纸黄金(元/克)', data: [], borderColor: '#165DFF', backgroundColor: 'rgba(22, 93, 255, 0.1)', borderWidth: 2, tension: 0.3, fill: true, pointRadius: 0, pointHoverRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 8 } }, y: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { callback: v => v + ' 元' } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `价格: ${ctx.raw} 元/克` } } }
             });
 
             // 白银价格图表
             const silverCtx = document.getElementById('silver-chart').getContext('2d');
             silverChart = new Chart(silverCtx, {
                 type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: '工行纸白银(元/克)',
-                        data: [],
-                        borderColor: '#0FC6C2',
-                        backgroundColor: 'rgba(15, 198, 194, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { maxRotation: 0, maxTicksLimit: 8 }
-                        },
-                        y: {
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                            ticks: { callback: (v) => v + ' 元' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: { label: (ctx) => `价格: ${ctx.raw} 元/克` }
-                        }
-                    }
-                }
+                data: { labels: [], datasets: [{ label: '工行纸白银(元/克)', data: [], borderColor: '#0FC6C2', backgroundColor: 'rgba(15, 198, 194, 0.1)', borderWidth: 2, tension: 0.3, fill: true, pointRadius: 0, pointHoverRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' }, scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 8 } }, y: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { callback: v => v + ' 元' } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `价格: ${ctx.raw} 元/克` } } }
             });
 
-            // 黄金胜率图表
+            // 胜率图表
             const goldWinRateCtx = document.getElementById('gold-win-rate-chart').getContext('2d');
-            goldWinRateChart = new Chart(goldWinRateCtx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [0, 100],
-                        backgroundColor: ['#00B42A', '#F2F3F5'],
-                        borderWidth: 0,
-                        cutout: '80%'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // 白银胜率图表
+            goldWinRateChart = new Chart(goldWinRateCtx, { type: 'doughnut', data: { datasets: [{ data: [0, 100], backgroundColor: ['#00B42A', '#F2F3F5'], borderWidth: 0, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
             const silverWinRateCtx = document.getElementById('silver-win-rate-chart').getContext('2d');
-            silverWinRateChart = new Chart(silverWinRateCtx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [0, 100],
-                        backgroundColor: ['#00B42A', '#F2F3F5'],
-                        borderWidth: 0,
-                        cutout: '80%'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
+            silverWinRateChart = new Chart(silverWinRateCtx, { type: 'doughnut', data: { datasets: [{ data: [0, 100], backgroundColor: ['#00B42A', '#F2F3F5'], borderWidth: 0, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         }
 
-        // 格式化时间（仅显示时分）
+        // 格式化时间
         function formatTime(timestamp) {
             const date = new Date(timestamp);
             return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
 
-        // 更新价格图表数据
+        // 更新价格图表
         function updatePriceCharts(historyData) {
-            // 黄金图表
             goldChart.data.labels = historyData.gold.map(item => formatTime(item.time));
             goldChart.data.datasets[0].data = historyData.gold.map(item => parseFloat(item.price));
             goldChart.update();
-
-            // 白银图表
             silverChart.data.labels = historyData.silver.map(item => formatTime(item.time));
             silverChart.data.datasets[0].data = historyData.silver.map(item => parseFloat(item.price));
             silverChart.update();
         }
 
-        // 更新当前价格和基础信息
+        // 更新当前价格
         function updateCurrentInfo(currentData) {
             document.getElementById('update-time').textContent = `数据更新时间：${currentData.updateTime}`;
             document.getElementById('gold-current-price').textContent = `${currentData.gold} 元/克`;
             document.getElementById('silver-current-price').textContent = `${currentData.silver} 元/克`;
         }
 
-        // 更新最新操作建议
+        // 更新操作建议
         function updateLatestAdvice(advice) {
             // 黄金建议
-            document.getElementById('gold-strategy').textContent = advice.gold?.advice || '--';
+            document.getElementById('gold-strategy').textContent = advice.gold?.advice || '持有';
             document.getElementById('gold-entry-price').textContent = advice.gold?.entryPrice || '--';
             document.getElementById('gold-take-profit').textContent = advice.gold?.takeProfit || '--';
             document.getElementById('gold-stop-loss').textContent = advice.gold?.stopLoss || '--';
-            document.getElementById('gold-reason').textContent = advice.gold?.reason || '数据加载中';
+            document.getElementById('gold-reason').textContent = advice.gold?.reason || '初始建议：等待数据积累';
 
             // 白银建议
-            document.getElementById('silver-strategy').textContent = advice.silver?.advice || '--';
+            document.getElementById('silver-strategy').textContent = advice.silver?.advice || '持有';
             document.getElementById('silver-entry-price').textContent = advice.silver?.entryPrice || '--';
             document.getElementById('silver-take-profit').textContent = advice.silver?.takeProfit || '--';
             document.getElementById('silver-stop-loss').textContent = advice.silver?.stopLoss || '--';
-            document.getElementById('silver-reason').textContent = advice.silver?.reason || '数据加载中';
+            document.getElementById('silver-reason').textContent = advice.silver?.reason || '初始建议：等待数据积累';
         }
 
-        // 更新24小时预测对比表格
+        // 更新预测对比表格
         function updatePredictionTable(history) {
             const tableBody = document.getElementById('prediction-table');
             tableBody.innerHTML = '';
-
-            // 倒序显示（最新在前）
             const reversedHistory = [...history].reverse();
             
             reversedHistory.forEach(item => {
@@ -457,52 +334,79 @@
                     <td class="px-6 py-4 whitespace-nowrap">${time}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="${item.gold.advice === '买入' ? 'text-success' : item.gold.advice === '卖出' ? 'text-danger' : 'text-gray-500'}">
-                            ${item.gold.advice || '--'}
+                            ${item.gold.advice || '持有'}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="${item.goldResult?.includes('✓') ? 'text-success' : item.goldResult?.includes('✗') ? 'text-danger' : 'text-gray-500'}">
-                            ${item.goldResult || '--'}
+                            ${item.goldResult || '待验证'}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="${item.silver.advice === '买入' ? 'text-success' : item.silver.advice === '卖出' ? 'text-danger' : 'text-gray-500'}">
-                            ${item.silver.advice || '--'}
+                            ${item.silver.advice || '持有'}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="${item.silverResult?.includes('✓') ? 'text-success' : item.silverResult?.includes('✗') ? 'text-danger' : 'text-gray-500'}">
-                            ${item.silverResult || '--'}
+                            ${item.silverResult || '待验证'}
                         </span>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
 
-            // 不足24行时补全空行
-            if (reversedHistory.length < 24) {
-                for (let i = 0; i < 24 - reversedHistory.length; i++) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td class="px-6 py-4" colspan="5">--</td>`;
-                    tableBody.appendChild(row);
-                }
+            // 兜底：如果没有历史数据，显示一条初始记录
+            if (reversedHistory.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td class="px-6 py-4 text-gray-500">持有</td>
+                    <td class="px-6 py-4 text-gray-500">待验证</td>
+                    <td class="px-6 py-4 text-gray-500">持有</td>
+                    <td class="px-6 py-4 text-gray-500">待验证</td>
+                `;
+                tableBody.appendChild(row);
             }
         }
 
         // 更新胜率统计
         function updateWinRate(rate) {
-            // 黄金胜率
             document.getElementById('gold-win-rate-value').textContent = `${rate.gold || 0}%`;
             goldWinRateChart.data.datasets[0].data = [rate.gold || 0, 100 - (rate.gold || 0)];
             goldWinRateChart.update();
-
-            // 白银胜率
             document.getElementById('silver-win-rate-value').textContent = `${rate.silver || 0}%`;
             silverWinRateChart.data.datasets[0].data = [rate.silver || 0, 100 - (rate.silver || 0)];
             silverWinRateChart.update();
         }
 
-        // 加载所有数据（包含价格、建议、胜率）
+        // 主动触发建议生成（如果没有建议数据）
+        async function ensureAdviceExists() {
+            try {
+                const adviceRes = await fetch(`${API_BASE_URL}/advice`);
+                const latestAdvice = await adviceRes.json();
+                
+                // 如果没有建议数据，主动触发生成
+                if (!latestAdvice.gold) {
+                    console.log("无建议数据，主动生成中...");
+                    await fetch(`${API_BASE_URL}/generate-advice-now`);
+                    // 等待3秒后重新获取
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    const newAdviceRes = await fetch(`${API_BASE_URL}/advice`);
+                    return newAdviceRes.json();
+                }
+                return latestAdvice;
+            } catch (error) {
+                console.error("主动生成建议失败：", error);
+                // 兜底：返回默认建议
+                return {
+                    gold: { advice: '持有', reason: '初始建议：等待数据积累' },
+                    silver: { advice: '持有', reason: '初始建议：等待数据积累' }
+                };
+            }
+        }
+
+        // 加载所有数据（核心函数）
         async function loadAllData() {
             try {
                 // 1. 加载价格和历史数据
@@ -515,38 +419,40 @@
                 if (currentData.error) throw new Error(currentData.error);
                 if (historyData.error) throw new Error(historyData.error);
 
-                // 2. 加载建议数据
-                const [adviceRes, adviceHistoryRes, winRateRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/advice`),
+                // 2. 确保建议数据存在（关键：主动触发生成）
+                const latestAdvice = await ensureAdviceExists();
+
+                // 3. 加载建议历史和胜率
+                const [adviceHistoryRes, winRateRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/advice-history`),
                     fetch(`${API_BASE_URL}/win-rate`)
                 ]);
-                const latestAdvice = await adviceRes.json();
                 const adviceHistory = await adviceHistoryRes.json();
                 const winRate = await winRateRes.json();
-                if (latestAdvice.error) throw new Error(latestAdvice.error);
-                if (adviceHistory.error) throw new Error(adviceHistory.error);
-                if (winRate.error) throw new Error(winRate.error);
 
-                // 3. 更新页面
+                // 4. 更新页面所有内容
                 updateCurrentInfo(currentData);
                 updatePriceCharts(historyData);
                 updateLatestAdvice(latestAdvice);
-                updatePredictionTable(adviceHistory);
-                updateWinRate(winRate);
+                updatePredictionTable(adviceHistory || []);
+                updateWinRate(winRate || { gold: 0, silver: 0 });
 
             } catch (error) {
                 document.getElementById('update-time').textContent = `数据加载失败：${error.message}`;
-                console.error('数据加载错误：', error);
+                console.error('加载错误：', error);
+                // 错误兜底：显示默认建议
+                updateLatestAdvice({
+                    gold: { advice: '持有', reason: '网络异常：默认建议' },
+                    silver: { advice: '持有', reason: '网络异常：默认建议' }
+                });
             }
         }
 
-        // 页面加载完成后初始化
+        // 页面加载完成后立即执行
         document.addEventListener('DOMContentLoaded', function() {
             initCharts();
-            loadAllData();
-            // 每3分钟刷新一次数据
-            setInterval(loadAllData, 180000);
+            loadAllData(); // 首次加载就确保有建议
+            setInterval(loadAllData, 180000); // 每3分钟刷新
         });
     </script>
 </body>
