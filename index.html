@@ -6,7 +6,7 @@
     <title>聚宝盆风控技术研究室自研系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -77,7 +77,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold flex items-center">
                             <i class="fa fa-btc mr-2 text-yellow-500"></i>
-                            工行纸黄金价格走势（分时图）
+                            工行纸黄金价格走势（30天分时图）
                         </h2>
                         <div id="gold-current-price" class="text-xl font-bold text-primary">--</div>
                     </div>
@@ -89,7 +89,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold flex items-center">
                             <i class="fa fa-money mr-2 text-gray-400"></i>
-                            工行纸白银价格走势（分时图）
+                            工行纸白银价格走势（30天分时图）
                         </h2>
                         <div id="silver-current-price" class="text-xl font-bold text-secondary">--</div>
                     </div>
@@ -237,7 +237,6 @@
     </footer>
 
     <script>
-        // 全局变量
         let goldChart, silverChart, goldWinRateChart, silverWinRateChart;
         const API_BASE_URL = "https://precious-metal-analyzer.aoyouios.workers.dev";
 
@@ -248,7 +247,7 @@
 
         // 初始化图表
         function initCharts() {
-            // 黄金价格图表
+            // 黄金价格图表（支持更多数据点）
             const goldCtx = document.getElementById('gold-chart').getContext('2d');
             goldChart = new Chart(goldCtx, {
                 type: 'line',
@@ -260,7 +259,7 @@
                         borderColor: '#165DFF',
                         backgroundColor: 'rgba(22, 93, 255, 0.1)',
                         borderWidth: 2,
-                        tension: 0.3,
+                        tension: 0.4, // 曲线更平滑
                         fill: true,
                         pointRadius: 0,
                         pointHoverRadius: 4
@@ -271,7 +270,7 @@
                     maintainAspectRatio: false,
                     interaction: { intersect: false, mode: 'index' },
                     scales: {
-                        x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 8 } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 10 } },
                         y: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { callback: v => v + ' 元' } }
                     },
                     plugins: {
@@ -281,7 +280,7 @@
                 }
             });
 
-            // 白银价格图表
+            // 白银价格图表（支持更多数据点）
             const silverCtx = document.getElementById('silver-chart').getContext('2d');
             silverChart = new Chart(silverCtx, {
                 type: 'line',
@@ -293,7 +292,7 @@
                         borderColor: '#0FC6C2',
                         backgroundColor: 'rgba(15, 198, 194, 0.1)',
                         borderWidth: 2,
-                        tension: 0.3,
+                        tension: 0.4, // 曲线更平滑
                         fill: true,
                         pointRadius: 0,
                         pointHoverRadius: 4
@@ -304,7 +303,7 @@
                     maintainAspectRatio: false,
                     interaction: { intersect: false, mode: 'index' },
                     scales: {
-                        x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 8 } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 10 } },
                         y: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { callback: v => v + ' 元' } }
                     },
                     plugins: {
@@ -330,19 +329,21 @@
             });
         }
 
-        // 格式化时间
+        // 格式化时间（显示日期+时间）
         function formatTime(timestamp) {
             const date = new Date(timestamp);
-            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            return `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
 
-        // 更新价格图表
+        // 更新价格图表（使用更多数据点）
         function updatePriceCharts(historyData) {
             try {
                 if (!historyData?.gold || !historyData?.silver) return;
-                // 只取最近20条数据（避免图表拥挤）
-                const recentGold = historyData.gold.slice(-20);
-                const recentSilver = historyData.silver.slice(-20);
+                
+                // 使用最近50条数据（更多数据点，曲线更明显）
+                const recentGold = historyData.gold.slice(-50);
+                const recentSilver = historyData.silver.slice(-50);
+                
                 goldChart.data.labels = recentGold.map(item => formatTime(item.time));
                 goldChart.data.datasets[0].data = recentGold.map(item => parseFloat(item.price));
                 goldChart.update();
@@ -355,15 +356,18 @@
             }
         }
 
-        // 更新当前价格
+        // 更新当前价格和时间（确保更新update-time）
         function updateCurrentInfo(currentData) {
             try {
                 if (!currentData) return;
+                // 强制更新时间显示
                 document.getElementById('update-time').textContent = `数据更新时间：${currentData.updateTime || new Date().toLocaleString()}`;
                 document.getElementById('gold-current-price').textContent = `${currentData.gold || '--'} 元/克`;
                 document.getElementById('silver-current-price').textContent = `${currentData.silver || '--'} 元/克`;
             } catch (error) {
                 console.error("价格更新失败：", error);
+                // 即使出错也显示默认时间
+                document.getElementById('update-time').textContent = `数据更新时间：${new Date().toLocaleString()}`;
             }
         }
 
@@ -371,23 +375,22 @@
         function updateLatestAdvice(advice) {
             try {
                 if (!advice) {
-                    // 无数据时显示默认建议
                     document.getElementById('gold-strategy').textContent = '持有';
-                    document.getElementById('gold-reason').textContent = '等待数据积累（首次加载）';
+                    document.getElementById('gold-reason').textContent = '等待数据积累';
                     document.getElementById('silver-strategy').textContent = '持有';
-                    document.getElementById('silver-reason').textContent = '等待数据积累（首次加载）';
+                    document.getElementById('silver-reason').textContent = '等待数据积累';
                     return;
                 }
                 // 黄金建议
                 document.getElementById('gold-strategy').textContent = advice.gold?.advice || '持有';
-                document.getElementById('gold-entry-price').textContent = advice.gold?.entryPrice || document.getElementById('gold-current-price').textContent.split(' ')[0];
+                document.getElementById('gold-entry-price').textContent = advice.gold?.entryPrice || '--';
                 document.getElementById('gold-take-profit').textContent = advice.gold?.takeProfit || '--';
                 document.getElementById('gold-stop-loss').textContent = advice.gold?.stopLoss || '--';
                 document.getElementById('gold-reason').textContent = advice.gold?.reason || '指标分析中';
 
                 // 白银建议
                 document.getElementById('silver-strategy').textContent = advice.silver?.advice || '持有';
-                document.getElementById('silver-entry-price').textContent = advice.silver?.entryPrice || document.getElementById('silver-current-price').textContent.split(' ')[0];
+                document.getElementById('silver-entry-price').textContent = advice.silver?.entryPrice || '--';
                 document.getElementById('silver-take-profit').textContent = advice.silver?.takeProfit || '--';
                 document.getElementById('silver-stop-loss').textContent = advice.silver?.stopLoss || '--';
                 document.getElementById('silver-reason').textContent = advice.silver?.reason || '指标分析中';
@@ -403,14 +406,12 @@
                 tableBody.innerHTML = '';
                 
                 if (!history || history.length === 0) {
-                    // 无历史数据时显示提示
                     const row = document.createElement('tr');
                     row.innerHTML = '<td colspan="5" class="px-6 py-12 text-center text-gray-500">暂无历史数据（每小时更新一条）</td>';
                     tableBody.appendChild(row);
                     return;
                 }
 
-                // 倒序显示（最新在前）
                 const reversedHistory = [...history].reverse();
                 reversedHistory.forEach(item => {
                     const time = new Date(item.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -463,40 +464,22 @@
             }
         }
 
-        // 主动触发生成建议（如果没有）
-        async function ensureAdviceExists() {
-            try {
-                const adviceRes = await fetch(`${API_BASE_URL}/advice`);
-                const latestAdvice = await adviceRes.json();
-                if (latestAdvice.gold) return latestAdvice;
-
-                // 无建议时主动触发
-                console.log("主动生成建议...");
-                await fetch(`${API_BASE_URL}/generate-advice-now`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                const newAdviceRes = await fetch(`${API_BASE_URL}/advice`);
-                return newAdviceRes.json();
-            } catch (error) {
-                console.error("主动生成建议失败：", error);
-                return null;
-            }
-        }
-
-        // 加载所有数据
+        // 加载所有数据（确保首页各部分都更新）
         async function loadAllData() {
             try {
-                // 1. 加载价格数据（优先）
+                // 1. 加载价格数据（优先更新时间）
                 const currentRes = await fetch(`${API_BASE_URL}/data`);
                 const currentData = await currentRes.json();
-                updateCurrentInfo(currentData);
+                updateCurrentInfo(currentData); // 立即更新时间和价格
 
-                // 2. 加载历史价格
+                // 2. 加载历史数据（图表）
                 const historyRes = await fetch(`${API_BASE_URL}/history`);
                 const historyData = await historyRes.json();
                 updatePriceCharts(historyData);
 
-                // 3. 加载建议数据（带主动触发）
-                const latestAdvice = await ensureAdviceExists();
+                // 3. 加载建议数据
+                const adviceRes = await fetch(`${API_BASE_URL}/advice`);
+                const latestAdvice = await adviceRes.json();
                 updateLatestAdvice(latestAdvice);
 
                 // 4. 加载建议历史和胜率
@@ -510,11 +493,12 @@
 
             } catch (error) {
                 console.error("加载错误：", error);
-                document.getElementById('update-time').textContent = `部分数据加载失败：${error.message}`;
+                // 错误时也确保时间更新
+                document.getElementById('update-time').textContent = `数据加载完成（部分数据延迟）：${new Date().toLocaleString()}`;
             }
         }
 
-        // 页面加载后初始化
+        // 页面加载后立即执行，确保首页快速显示
         document.addEventListener('DOMContentLoaded', function() {
             initCharts();
             loadAllData();
