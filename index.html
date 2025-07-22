@@ -5,19 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>聚宝盆专业贵金属分析系统</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 仅保留必要的图表依赖，避免冲突 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
-  
   <style>
-    .chart-container { 
-      height: 300px; 
-      margin: 10px 0; 
-    }
-    .sub-chart { 
-      height: 180px; 
-      margin: 10px 0; 
-    }
+    .chart-container { height: 300px; margin: 10px 0; }
+    .sub-chart { height: 180px; margin: 10px 0; }
     .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .history-table th, .history-table td { border: 1px solid #444; padding: 8px; text-align: left; }
   </style>
@@ -40,11 +31,11 @@
       </div>
     </div>
 
-    <!-- 黄金图表 -->
+    <!-- 黄金图表（用柱状图替代K线，折线图替代分时） -->
     <div class="bg-gray-800 p-4 rounded mb-6">
       <h2>黄金专业图表</h2>
       <div class="chart-container">
-        <canvas id="gold-candlestick"></canvas>
+        <canvas id="gold-chart"></canvas>
       </div>
       <div class="sub-chart">
         <canvas id="gold-line"></canvas>
@@ -55,14 +46,14 @@
     <div class="bg-gray-800 p-4 rounded mb-6">
       <h2>白银专业图表</h2>
       <div class="chart-container">
-        <canvas id="silver-candlestick"></canvas>
+        <canvas id="silver-chart"></canvas>
       </div>
       <div class="sub-chart">
         <canvas id="silver-line"></canvas>
       </div>
     </div>
 
-    <!-- 操作建议和历史对比模块保持不变 -->
+    <!-- 操作建议 -->
     <div class="bg-gray-800 p-4 rounded mb-6">
       <h2>智能操作建议</h2>
       <div id="advice" class="p-3 bg-gray-700 rounded">
@@ -71,6 +62,7 @@
       </div>
     </div>
 
+    <!-- 历史对比 -->
     <div class="bg-gray-800 p-4 rounded">
       <h2>历史建议对比</h2>
       <div class="overflow-x-auto">
@@ -94,126 +86,152 @@
   </div>
 
   <script>
-    // 关键修复：移除时间适配器依赖，使用时间戳直接处理
     const API_BASE = "https://precious-metal-analyzer.aoyouios.workers.dev";
-    
-    // 1. 生成简单的K线数据（使用数字时间戳）
-    function generateSimpleData(type) {
+
+    // 1. 生成默认数据
+    function generateData(type) {
       const base = type === 'gold' ? 772 : 8.78;
       const data = [];
-      for (let i = 9; i >= 0; i--) {
+      for (let i = 10; i >= 0; i--) {
         const c = +(base + (Math.random() - 0.5) * (type === 'gold' ? 1 : 0.1)).toFixed(2);
         data.push({
-          t: i, // 使用简单数字代替时间戳（0-9）
-          o: +(c - Math.random() * 0.05).toFixed(2),
-          h: +(c + Math.random() * 0.05).toFixed(2),
-          l: +(c - Math.random() * 0.08).toFixed(2),
-          c: c
+          time: `T${i}`,
+          value: c
         });
       }
       return data;
     }
 
-    // 2. 初始化黄金K线图（极简配置）
-    function initGoldChart() {
-      const ctx = document.getElementById('gold-candlestick').getContext('2d');
-      const data = generateSimpleData('gold');
+    // 2. 初始化黄金图表
+    function initGoldCharts() {
+      const data = generateData('gold');
       
-      new Chart(ctx, {
-        type: 'candlestick',
+      // 主图表（柱状图）
+      new Chart(document.getElementById('gold-chart'), {
+        type: 'bar',
         data: {
-          datasets: [{
-            label: '黄金K线',
-            data: data.map(item => ({
-              x: item.t, // 使用简单数字X轴
-              o: item.o,
-              h: item.h,
-              l: item.l,
-              c: item.c
-            })),
-            color: { up: 'red', down: 'green' }
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { title: { display: true, text: '时段' } },
-            y: { title: { display: true, text: '价格' } }
-          }
-        }
-      });
-
-      // 黄金分时图
-      const lineCtx = document.getElementById('gold-line').getContext('2d');
-      new Chart(lineCtx, {
-        type: 'line',
-        data: {
+          labels: data.map(item => item.time),
           datasets: [{
             label: '黄金价格',
-            data: data.map(item => ({ x: item.t, y: item.c })),
-            borderColor: 'yellow'
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-    }
-
-    // 3. 初始化白银K线图（极简配置）
-    function initSilverChart() {
-      const ctx = document.getElementById('silver-candlestick').getContext('2d');
-      const data = generateSimpleData('silver');
-      
-      new Chart(ctx, {
-        type: 'candlestick',
-        data: {
-          datasets: [{
-            label: '白银K线',
-            data: data.map(item => ({
-              x: item.t, // 使用简单数字X轴
-              o: item.o,
-              h: item.h,
-              l: item.l,
-              c: item.c
-            })),
-            color: { up: 'red', down: 'green' }
+            data: data.map(item => item.value),
+            backgroundColor: 'rgba(255, 215, 0, 0.7)'
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: '时段' } },
-            y: { title: { display: true, text: '价格' } }
+            y: { title: { display: true, text: '价格（元/克）' } }
           }
         }
       });
 
-      // 白银分时图
-      const lineCtx = document.getElementById('silver-line').getContext('2d');
-      new Chart(lineCtx, {
+      // 分时图（折线图）
+      new Chart(document.getElementById('gold-line'), {
         type: 'line',
         data: {
+          labels: data.map(item => item.time),
           datasets: [{
-            label: '白银价格',
-            data: data.map(item => ({ x: item.t, y: item.c })),
-            borderColor: 'gray'
+            label: '黄金走势',
+            data: data.map(item => item.value),
+            borderColor: 'rgb(255, 215, 0)',
+            fill: true,
+            backgroundColor: 'rgba(255, 215, 0, 0.1)'
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
       });
     }
 
-    // 页面加载后立即执行图表初始化（不依赖任何数据加载）
-    window.onload = () => {
-      // 直接初始化图表，不等待任何数据
-      initGoldChart();
-      initSilverChart();
+    // 3. 初始化白银图表
+    function initSilverCharts() {
+      const data = generateData('silver');
       
-      // 后台加载真实数据（不影响图表显示）
-      fetch(`${API_BASE}/history`).then(res => res.json()).then(data => {
-        console.log("真实数据已加载，可用于更新图表", data);
-      }).catch(err => console.log("加载真实数据失败，不影响显示", err));
+      // 主图表（柱状图）
+      new Chart(document.getElementById('silver-chart'), {
+        type: 'bar',
+        data: {
+          labels: data.map(item => item.time),
+          datasets: [{
+            label: '白银价格',
+            data: data.map(item => item.value),
+            backgroundColor: 'rgba(192, 192, 192, 0.7)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { title: { display: true, text: '价格（元/克）' } }
+          }
+        }
+      });
+
+      // 分时图（折线图）
+      new Chart(document.getElementById('silver-line'), {
+        type: 'line',
+        data: {
+          labels: data.map(item => item.time),
+          datasets: [{
+            label: '白银走势',
+            data: data.map(item => item.value),
+            borderColor: 'rgb(192, 192, 192)',
+            fill: true,
+            backgroundColor: 'rgba(192, 192, 192, 0.1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    // 4. 加载真实数据更新图表
+    async function loadRealData() {
+      try {
+        const res = await fetch(`${API_BASE}/history`);
+        if (res.ok) {
+          const history = await res.json();
+          // 用真实数据更新图表（如果有）
+          if (history.gold && history.gold.length > 0) {
+            updateChart('gold-chart', 'gold-line', history.gold);
+          }
+          if (history.silver && history.silver.length > 0) {
+            updateChart('silver-chart', 'silver-line', history.silver);
+          }
+        }
+      } catch (e) {
+        console.log("真实数据加载失败，不影响显示");
+      }
+    }
+
+    // 5. 更新图表数据
+    function updateChart(barId, lineId, data) {
+      const labels = data.map((_, i) => `T${i}`);
+      const values = data.map(item => item.c);
+      
+      // 更新柱状图
+      const barChart = Chart.getChart(barId);
+      barChart.data.labels = labels;
+      barChart.data.datasets[0].data = values;
+      barChart.update();
+
+      // 更新折线图
+      const lineChart = Chart.getChart(lineId);
+      lineChart.data.labels = labels;
+      lineChart.data.datasets[0].data = values;
+      lineChart.update();
+    }
+
+    // 页面加载后立即执行
+    window.onload = () => {
+      initGoldCharts();
+      initSilverCharts();
+      loadRealData(); // 后台更新真实数据
     };
   </script>
 </body>
