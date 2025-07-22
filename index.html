@@ -98,18 +98,37 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
+    
+    /* 倒计时样式 */
+    .countdown {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background-color: rgba(0, 113, 227, 0.1);
+      color: #0071e3;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
   </style>
 </head>
 
 <body>
   <!-- 顶部导航 -->
   <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-apple-border">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center">
         <i class="fa fa-diamond text-primary mr-2"></i>
         <h1 class="font-semibold">聚宝盆贵金属预测技术工作室自研系统</h1>
       </div>
-      <span id="system-time" class="text-neutral text-sm">加载中...</span>
+      <div class="flex items-center gap-4">
+        <div class="countdown">
+          <i class="fa fa-clock-o mr-1"></i>
+          <span>下次更新：</span>
+          <span id="refresh-countdown" class="font-medium ml-1">05:00</span>
+        </div>
+        <span id="system-time" class="text-neutral text-sm">加载中...</span>
+      </div>
     </div>
   </header>
 
@@ -423,6 +442,9 @@
     const HISTORY_API = "https://precious-metal-analyzer.aoyouios.workers.dev/history";
     const TODAY = new Date().toISOString().split('T')[0]; // 今日日期（YYYY-MM-DD）
     const INITIAL_CAPITAL = 10000; // 初始本金10000元
+    const REFRESH_INTERVAL = 300; // 刷新间隔（秒）- 5分钟 = 300秒
+    let countdownTimer = null;
+    let remainingSeconds = REFRESH_INTERVAL;
 
     // 1. 时间格式化
     function formatTime(timestamp) {
@@ -447,7 +469,42 @@
       return '¥' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
-    // 4. 更新系统时间
+    // 4. 格式化倒计时（将秒转换为分:秒格式）
+    function formatCountdown(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 5. 更新倒计时显示
+    function updateCountdown() {
+      remainingSeconds--;
+      document.getElementById('refresh-countdown').textContent = formatCountdown(remainingSeconds);
+      
+      // 倒计时结束时刷新数据并重置倒计时
+      if (remainingSeconds <= 0) {
+        clearInterval(countdownTimer);
+        fetchData(); // 触发数据刷新
+        remainingSeconds = REFRESH_INTERVAL; // 重置倒计时
+        startCountdown(); // 重新开始倒计时
+      }
+    }
+
+    // 6. 启动倒计时
+    function startCountdown() {
+      // 清除可能存在的旧计时器
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+      }
+      
+      // 立即更新一次显示
+      document.getElementById('refresh-countdown').textContent = formatCountdown(remainingSeconds);
+      
+      // 启动新计时器，每秒更新一次
+      countdownTimer = setInterval(updateCountdown, 1000);
+    }
+
+    // 7. 更新系统时间
     function updateSystemTime() {
       try {
         document.getElementById('system-time').textContent = new Date().toLocaleString();
@@ -459,7 +516,7 @@
     setInterval(updateSystemTime, 1000);
     updateSystemTime();
 
-    // 5. 计算收益统计
+    // 8. 计算收益统计
     function calculateProfitStats() {
       // 获取历史记录数据
       const historyRows = document.querySelectorAll('#history-table tr');
@@ -544,7 +601,7 @@
       document.getElementById('monthly-average-rate').textContent = monthlyAverageRate;
     }
 
-    // 6. 获取数据（仅保留今日数据）
+    // 9. 获取数据（仅保留今日数据）
     async function fetchData() {
       try {
         showLoading('gold');
@@ -634,7 +691,7 @@
       }
     }
 
-    // 7. 生成完整的今日模拟数据（从开盘到现在）
+    // 10. 生成完整的今日模拟数据（从开盘到现在）
     function generateTodayMockData(type) {
       const data = [];
       const basePrice = type === 'gold' ? 762.5 : 8.80; // 今日开盘价
@@ -668,7 +725,7 @@
       return data;
     }
 
-    // 8. 补充今日数据（确保数据完整）
+    // 11. 补充今日数据（确保数据完整）
     function supplementTodayData(type, existingData) {
       if (existingData.length === 0) return generateTodayMockData(type);
       
@@ -725,7 +782,7 @@
       return data;
     }
 
-    // 9. 更新数据信息（计数和时间范围）
+    // 12. 更新数据信息（计数和时间范围）
     function updateDataInfo(type) {
       const data = type === 'gold' ? goldData : silverData;
       if (data.length === 0) return;
@@ -737,7 +794,7 @@
       document.getElementById(type + '-time-range').textContent = `${firstTime} - ${lastTime}`;
     }
 
-    // 10. 更新价格显示（基于开盘价计算涨跌幅）
+    // 13. 更新价格显示（基于开盘价计算涨跌幅）
     function updatePriceDisplay() {
       // 处理黄金数据
       if (goldData.length > 0) {
@@ -790,7 +847,7 @@
       }
     }
 
-    // 11. 初始化黄金图表
+    // 14. 初始化黄金图表
     function initGoldChart() {
       try {
         showLoading('gold');
@@ -916,7 +973,7 @@
       }
     }
 
-    // 12. 初始化白银图表
+    // 15. 初始化白银图表
     function initSilverChart() {
       try {
         showLoading('silver');
@@ -1040,7 +1097,7 @@
       }
     }
 
-    // 13. 生成历史预测表格（24行）
+    // 16. 生成历史预测表格（24行）
     function generateHistoryTable(rowCount) {
       const tbody = document.getElementById('history-table');
       tbody.innerHTML = '';
@@ -1124,15 +1181,24 @@
 
     // 初始化页面
     function init() {
+      // 为刷新按钮添加点击事件，同时重置倒计时
       document.getElementById('refresh-gold').addEventListener('click', function() {
         fetchData();
-      });
-      document.getElementById('refresh-silver').addEventListener('click', function() {
-        fetchData();
+        remainingSeconds = REFRESH_INTERVAL; // 重置倒计时
+        startCountdown();
       });
       
+      document.getElementById('refresh-silver').addEventListener('click', function() {
+        fetchData();
+        remainingSeconds = REFRESH_INTERVAL; // 重置倒计时
+        startCountdown();
+      });
+      
+      // 初始加载数据
       fetchData();
-      setInterval(fetchData, 300000); // 5分钟刷新一次
+      
+      // 启动刷新倒计时
+      startCountdown();
     }
 
     // 确保DOM加载完成
