@@ -51,31 +51,44 @@
   </style>
   
   <style>
+    /* 确保图表优先加载显示 */
+    .chart-container {
+      height: 320px !important;
+      width: 100% !important;
+      min-height: 320px;
+    }
+    
+    .mini-chart-container {
+      height: 240px !important;
+      width: 100% !important;
+      min-height: 240px;
+    }
+    
+    canvas {
+      display: block !important;
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    
     /* 基础样式 */
     body {
       background-color: #F5F5F7 !important;
       color: #1D1D1F !important;
     }
     
-    /* 图表容器 */
-    .chart-container {
-      height: 320px;
+    /* 加载状态覆盖层 */
+    .chart-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-    }
-    
-    .mini-chart-container {
-      height: 240px;
-      width: 100%;
-    }
-    
-    /* 平滑曲线效果 */
-    .smooth-line {
-      tension: 0.4 !important;
-    }
-    
-    /* 确保Canvas正确显示 */
-    canvas {
-      display: block;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -140,17 +153,23 @@
       </div>
     </div>
 
-    <!-- 黄金图表区域（分时图在上，K线图在下） -->
+    <!-- 黄金图表区域（确保显示） -->
     <div class="bg-apple-card rounded-xl shadow-apple p-6 mb-8">
       <h2 class="text-xl font-semibold mb-6">黄金价格图表</h2>
       
-      <!-- 分时图（上） -->
-      <div class="mini-chart-container mb-6">
+      <!-- 分时图（上）- 带加载状态 -->
+      <div class="mini-chart-container mb-6 relative">
+        <div id="gold-line-loading" class="chart-loading">
+          <i class="fa fa-spinner fa-spin text-primary text-2xl"></i>
+        </div>
         <canvas id="gold-line"></canvas>
       </div>
       
-      <!-- K线图（下） -->
-      <div class="chart-container">
+      <!-- K线图（下）- 带加载状态 -->
+      <div class="chart-container relative">
+        <div id="gold-candlestick-loading" class="chart-loading">
+          <i class="fa fa-spinner fa-spin text-primary text-2xl"></i>
+        </div>
         <canvas id="gold-candlestick"></canvas>
       </div>
     </div>
@@ -160,12 +179,18 @@
       <h2 class="text-xl font-semibold mb-6">白银价格图表</h2>
       
       <!-- 分时图（上） -->
-      <div class="mini-chart-container mb-6">
+      <div class="mini-chart-container mb-6 relative">
+        <div id="silver-line-loading" class="chart-loading">
+          <i class="fa fa-spinner fa-spin text-primary text-2xl"></i>
+        </div>
         <canvas id="silver-line"></canvas>
       </div>
       
       <!-- K线图（下） -->
-      <div class="chart-container">
+      <div class="chart-container relative">
+        <div id="silver-candlestick-loading" class="chart-loading">
+          <i class="fa fa-spinner fa-spin text-primary text-2xl"></i>
+        </div>
         <canvas id="silver-candlestick"></canvas>
       </div>
     </div>
@@ -253,8 +278,9 @@
     let goldLineChart, goldCandlestickChart;
     let silverLineChart, silverCandlestickChart;
     const API_URL = "https://precious-metal-analyzer.aoyouios.workers.dev/data";
+    const HISTORY_API_URL = "https://precious-metal-analyzer.aoyouios.workers.dev/history";
     
-    // 1. 时间格式化（修复Invalid Date问题）
+    // 1. 时间格式化
     function formatTime(timestamp) {
       if (!timestamp || isNaN(timestamp) || timestamp < 100000000000) {
         return "未知时间";
@@ -284,22 +310,19 @@
         const data = await response.json();
         
         // 更新黄金价格
-        const goldPriceEl = document.getElementById('gold-price');
-        const goldTimeEl = document.getElementById('gold-time');
-        
         if (data.gold) {
-          goldPriceEl.textContent = parseFloat(data.gold).toFixed(2);
+          document.getElementById('gold-price').textContent = parseFloat(data.gold).toFixed(2);
         }
         
+        // 更新时间
         if (data.updateTime) {
-          goldTimeEl.textContent = formatTime(data.updateTime);
+          document.getElementById('gold-time').textContent = formatTime(data.updateTime);
           document.getElementById('silver-time').textContent = formatTime(data.updateTime);
         }
         
         // 更新白银价格
-        const silverPriceEl = document.getElementById('silver-price');
         if (data.silver) {
-          silverPriceEl.textContent = parseFloat(data.silver).toFixed(2);
+          document.getElementById('silver-price').textContent = parseFloat(data.silver).toFixed(2);
         }
         
         // 更新图表数据
@@ -308,232 +331,294 @@
         
       } catch (error) {
         console.error('获取价格失败:', error);
-        // 失败时不修改现有价格，保持最后显示的值
+        // 失败时保持当前价格
       }
     }
 
-    // 4. 生成默认图表数据
-    function generateDefaultChartData(type, count = 24) {
+    // 4. 生成大量模拟历史数据（增加数据量，确保图表饱满）
+    function generateHistoricalData(type, days = 30, pointsPerDay = 24) {
       const basePrice = type === 'gold' ? 772.05 : 8.78;
       const data = [];
       let lastPrice = basePrice;
+      let currentDate = new Date();
+      currentDate.setDate(currentDate.getDate() - days); // 从30天前开始
       
-      for (let i = count; i >= 0; i--) {
-        const change = (Math.random() - 0.45) * (type === 'gold' ? 0.5 : 0.05);
-        const currentPrice = +(lastPrice + change).toFixed(2);
-        
-        data.push({
-          x: new Date(Date.now() - i * 3600000),
-          o: +(currentPrice - (Math.random() * 0.05)).toFixed(2),
-          h: +(currentPrice + (Math.random() * 0.08)).toFixed(2),
-          l: +(currentPrice - (Math.random() * 0.08)).toFixed(2),
-          c: currentPrice
-        });
-        
-        lastPrice = currentPrice;
+      // 生成30天数据，每天24个点，共720个数据点
+      for (let day = 0; day < days; day++) {
+        for (let hour = 0; hour < pointsPerDay; hour++) {
+          // 每天价格有小趋势变化
+          const trend = (day - days/2) * 0.01; // 中间点为最低/最高点
+          // 随机波动，黄金波动大一些
+          const volatility = type === 'gold' ? 0.6 : 0.06;
+          const change = (Math.random() - 0.45) * volatility + trend;
+          
+          const currentPrice = +(lastPrice + change).toFixed(2);
+          
+          // 创建时间点
+          const pointTime = new Date(currentDate);
+          pointTime.setHours(hour);
+          
+          data.push({
+            x: pointTime,
+            o: +(currentPrice - (Math.random() * 0.05)).toFixed(2),
+            h: +(currentPrice + (Math.random() * 0.08)).toFixed(2),
+            l: +(currentPrice - (Math.random() * 0.08)).toFixed(2),
+            c: currentPrice
+          });
+          
+          lastPrice = currentPrice;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       
       return data;
     }
 
-    // 5. 初始化黄金分时图
-    function initGoldLineChart() {
-      const ctx = document.getElementById('gold-line').getContext('2d');
-      const data = generateDefaultChartData('gold');
-      
-      goldLineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [{
-            label: '黄金价格',
-            data: data.map(item => ({ x: item.x, y: item.c })),
-            borderColor: '#165DFF',
-            backgroundColor: 'rgba(22, 93, 255, 0.1)',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#165DFF',
-            fill: true,
-            tension: 0.4 // 平滑曲线
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            intersect: false,
-            mode: 'index'
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(29, 29, 31, 0.9)',
-              callbacks: {
-                label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: '#8A8F98' }
-            },
-            y: {
-              position: 'right',
-              grid: { color: 'rgba(0, 0, 0, 0.05)' },
-              ticks: { 
-                color: '#8A8F98',
-                callback: v => v.toFixed(2)
-              }
-            }
-          }
+    // 5. 混合真实与模拟数据（优先真实，不足则补充模拟）
+    async function getChartData(type) {
+      try {
+        // 尝试获取真实历史数据
+        const response = await fetch(`${HISTORY_API_URL}?type=${type}`);
+        const realData = await response.json();
+        
+        // 如果真实数据足够（至少100个点），直接使用
+        if (realData && realData.length > 100) {
+          return realData.map(item => ({
+            x: new Date(item.timestamp),
+            o: parseFloat(item.open),
+            h: parseFloat(item.high),
+            l: parseFloat(item.low),
+            c: parseFloat(item.close)
+          }));
         }
-      });
+      } catch (error) {
+        console.log('真实历史数据获取失败，使用模拟数据:', error);
+      }
+      
+      // 真实数据不足，使用模拟数据
+      return generateHistoricalData(type);
     }
 
-    // 6. 初始化黄金K线图
-    function initGoldCandlestickChart() {
-      const ctx = document.getElementById('gold-candlestick').getContext('2d');
-      const data = generateDefaultChartData('gold', 30);
-      
-      // 转换为K线图所需格式
-      const candleData = data.map(item => ({
-        x: item.x,
-        o: item.o,
-        h: item.h,
-        l: item.l,
-        c: item.c
-      }));
-      
-      goldCandlestickChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          datasets: [
-            // 实体部分
-            {
-              data: candleData.map(item => ({
-                x: item.x,
-                y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
-              })),
-              backgroundColor: candleData.map(item => 
-                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
-              ),
-              borderWidth: 0,
-              barPercentage: 0.6
+    // 6. 初始化黄金分时图（确保显示）
+    async function initGoldLineChart() {
+      try {
+        const ctx = document.getElementById('gold-line').getContext('2d');
+        const allData = await getChartData('gold');
+        
+        // 分时图使用最近48小时数据
+        const recentData = allData.slice(-48);
+        
+        goldLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: '黄金价格',
+              data: recentData.map(item => ({ x: item.x, y: item.c })),
+              borderColor: '#165DFF',
+              backgroundColor: 'rgba(22, 93, 255, 0.1)',
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: '#165DFF',
+              fill: true,
+              tension: 0.4 // 平滑曲线
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              intersect: false,
+              mode: 'index'
             },
-            // 影线部分
-            {
-              data: candleData.map(item => ({
-                x: item.x,
-                y: [item.l, item.h - item.l]
-              })),
-              backgroundColor: candleData.map(item => 
-                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
-              ),
-              borderWidth: 0,
-              barPercentage: 0.1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(ctx) {
-                  const index = ctx.dataIndex;
-                  const item = candleData[index];
-                  return [
-                    `开盘: ${item.o.toFixed(2)}`,
-                    `最高: ${item.h.toFixed(2)}`,
-                    `最低: ${item.l.toFixed(2)}`,
-                    `收盘: ${item.c.toFixed(2)}`
-                  ];
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(29, 29, 31, 0.9)',
+                callbacks: {
+                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#8A8F98' }
+              },
+              y: {
+                position: 'right',
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: { 
+                  color: '#8A8F98',
+                  callback: v => v.toFixed(2)
                 }
               }
             }
+          }
+        });
+        
+        // 隐藏加载状态
+        document.getElementById('gold-line-loading').style.display = 'none';
+      } catch (error) {
+        console.error('黄金分时图初始化失败:', error);
+        // 即使失败也隐藏加载状态，避免一直显示
+        document.getElementById('gold-line-loading').style.display = 'none';
+      }
+    }
+
+    // 7. 初始化黄金K线图
+    async function initGoldCandlestickChart() {
+      try {
+        const ctx = document.getElementById('gold-candlestick').getContext('2d');
+        const allData = await getChartData('gold');
+        
+        // K线图使用所有数据
+        const candleData = allData;
+        
+        goldCandlestickChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            datasets: [
+              // 实体部分
+              {
+                data: candleData.map(item => ({
+                  x: item.x,
+                  y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
+                })),
+                backgroundColor: candleData.map(item => 
+                  item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+                ),
+                borderWidth: 0,
+                barPercentage: 0.6
+              },
+              // 影线部分
+              {
+                data: candleData.map(item => ({
+                  x: item.x,
+                  y: [item.l, item.h - item.l]
+                })),
+                backgroundColor: candleData.map(item => 
+                  item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+                ),
+                borderWidth: 0,
+                barPercentage: 0.1
+              }
+            ]
           },
-          scales: {
-            x: { grid: { display: false }, ticks: { color: '#8A8F98' } },
-            y: {
-              position: 'right',
-              grid: { color: 'rgba(0, 0, 0, 0.05)' },
-              ticks: { color: '#8A8F98' }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    const index = ctx.dataIndex;
+                    const item = candleData[index];
+                    return [
+                      `开盘: ${item.o.toFixed(2)}`,
+                      `最高: ${item.h.toFixed(2)}`,
+                      `最低: ${item.l.toFixed(2)}`,
+                      `收盘: ${item.c.toFixed(2)}`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#8A8F98' } },
+              y: {
+                position: 'right',
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: { color: '#8A8F98' }
+              }
             }
           }
-        }
-      });
+        });
+        
+        // 隐藏加载状态
+        document.getElementById('gold-candlestick-loading').style.display = 'none';
+      } catch (error) {
+        console.error('黄金K线图初始化失败:', error);
+        document.getElementById('gold-candlestick-loading').style.display = 'none';
+      }
     }
 
-    // 7. 初始化白银图表（分时+K线）
-    function initSilverLineChart() {
-      const ctx = document.getElementById('silver-line').getContext('2d');
-      const data = generateDefaultChartData('silver');
-      
-      silverLineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [{
-            label: '白银价格',
-            data: data.map(item => ({ x: item.x, y: item.c })),
-            borderColor: '#8A8F98',
-            backgroundColor: 'rgba(138, 143, 152, 0.1)',
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.4
-          }]
-        },
-        options: goldLineChart.options // 复用黄金图表配置
-      });
+    // 8. 初始化白银图表（分时+K线）
+    async function initSilverLineChart() {
+      try {
+        const ctx = document.getElementById('silver-line').getContext('2d');
+        const allData = await getChartData('silver');
+        const recentData = allData.slice(-48);
+        
+        silverLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: '白银价格',
+              data: recentData.map(item => ({ x: item.x, y: item.c })),
+              borderColor: '#8A8F98',
+              backgroundColor: 'rgba(138, 143, 152, 0.1)',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4
+            }]
+          },
+          options: goldLineChart.options
+        });
+        
+        document.getElementById('silver-line-loading').style.display = 'none';
+      } catch (error) {
+        console.error('白银分时图初始化失败:', error);
+        document.getElementById('silver-line-loading').style.display = 'none';
+      }
     }
 
-    function initSilverCandlestickChart() {
-      const ctx = document.getElementById('silver-candlestick').getContext('2d');
-      const data = generateDefaultChartData('silver', 30);
-      
-      const candleData = data.map(item => ({
-        x: item.x,
-        o: item.o,
-        h: item.h,
-        l: item.l,
-        c: item.c
-      }));
-      
-      silverCandlestickChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          datasets: [
-            {
-              data: candleData.map(item => ({
-                x: item.x,
-                y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
-              })),
-              backgroundColor: candleData.map(item => 
-                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
-              ),
-              borderWidth: 0,
-              barPercentage: 0.6
-            },
-            {
-              data: candleData.map(item => ({
-                x: item.x,
-                y: [item.l, item.h - item.l]
-              })),
-              backgroundColor: candleData.map(item => 
-                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
-              ),
-              borderWidth: 0,
-              barPercentage: 0.1
-            }
-          ]
-        },
-        options: goldCandlestickChart.options // 复用黄金图表配置
-      });
+    async function initSilverCandlestickChart() {
+      try {
+        const ctx = document.getElementById('silver-candlestick').getContext('2d');
+        const allData = await getChartData('silver');
+        const candleData = allData;
+        
+        silverCandlestickChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            datasets: [
+              {
+                data: candleData.map(item => ({
+                  x: item.x,
+                  y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
+                })),
+                backgroundColor: candleData.map(item => 
+                  item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+                ),
+                borderWidth: 0,
+                barPercentage: 0.6
+              },
+              {
+                data: candleData.map(item => ({
+                  x: item.x,
+                  y: [item.l, item.h - item.l]
+                })),
+                backgroundColor: candleData.map(item => 
+                  item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+                ),
+                borderWidth: 0,
+                barPercentage: 0.1
+              }
+            ]
+          },
+          options: goldCandlestickChart.options
+        });
+        
+        document.getElementById('silver-candlestick-loading').style.display = 'none';
+      } catch (error) {
+        console.error('白银K线图初始化失败:', error);
+        document.getElementById('silver-candlestick-loading').style.display = 'none';
+      }
     }
 
-    // 8. 更新图表数据
+    // 9. 更新图表数据
     function updateChartsWithNewPrice(type, newPrice) {
       const now = new Date();
       const chart = type === 'gold' ? goldLineChart : silverLineChart;
@@ -548,40 +633,43 @@
         y: newPrice
       });
       
-      // 保持数据点数量
-      if (chart.data.datasets[0].data.length > 24) {
+      // 保持48小时数据
+      if (chart.data.datasets[0].data.length > 48) {
         chart.data.datasets[0].data.shift();
       }
       chart.update();
       
       // 更新K线图
-      const lastCandle = candlestickChart.data.datasets[0].data[candlestickChart.data.datasets[0].data.length - 1];
       candlestickChart.data.datasets[0].data.push({
         x: now,
         y: [Math.min(lastDataPoint.y, newPrice), Math.abs(lastDataPoint.y - newPrice)]
       });
       
-      if (candlestickChart.data.datasets[0].data.length > 30) {
+      // 保持30天数据
+      if (candlestickChart.data.datasets[0].data.length > 30*24) {
         candlestickChart.data.datasets[0].data.shift();
       }
       candlestickChart.update();
     }
 
-    // 9. 初始化所有图表
-    function initAllCharts() {
-      initGoldLineChart();
-      initGoldCandlestickChart();
-      initSilverLineChart();
-      initSilverCandlestickChart();
+    // 10. 初始化所有图表（确保打开即显示）
+    async function initAllCharts() {
+      // 并行初始化所有图表，加快显示速度
+      await Promise.all([
+        initGoldLineChart(),
+        initGoldCandlestickChart(),
+        initSilverLineChart(),
+        initSilverCandlestickChart()
+      ]);
     }
 
-    // 10. 页面加载完成后初始化
+    // 11. 页面加载完成后立即初始化
     document.addEventListener('DOMContentLoaded', function() {
-      // 初始化图表
-      initAllCharts();
-      
-      // 加载价格数据
-      fetchAndUpdatePrices();
+      // 优先初始化图表，确保显示
+      initAllCharts().then(() => {
+        // 图表初始化完成后再加载价格数据
+        fetchAndUpdatePrices();
+      });
       
       // 设置定时刷新（5分钟一次）
       setInterval(fetchAndUpdatePrices, 300000);
@@ -604,4 +692,3 @@
   </script>
 </body>
 </html>
-    
