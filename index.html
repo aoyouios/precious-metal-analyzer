@@ -6,11 +6,16 @@
   <title>聚宝盆专业贵金属分析系统</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
   <style>
     .chart-container { height: 300px; margin: 10px 0; }
     .sub-chart { height: 180px; margin: 10px 0; }
     .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .history-table th, .history-table td { border: 1px solid #444; padding: 8px; text-align: left; }
+    .result-success { color: #4CAF50; }
+    .result-fail { color: #F44336; }
+    .result-expired { color: #FFC107; }
+    .result-pending { color: #9E9E9E; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 p-4">
@@ -31,7 +36,7 @@
       </div>
     </div>
 
-    <!-- 黄金图表（用柱状图替代K线，折线图替代分时） -->
+    <!-- 黄金图表 -->
     <div class="bg-gray-800 p-4 rounded mb-6">
       <h2>黄金专业图表</h2>
       <div class="chart-container">
@@ -62,7 +67,7 @@
       </div>
     </div>
 
-    <!-- 历史对比 -->
+    <!-- 历史建议对比 -->
     <div class="bg-gray-800 p-4 rounded">
       <h2>历史建议对比</h2>
       <div class="overflow-x-auto">
@@ -77,8 +82,7 @@
             </tr>
           </thead>
           <tbody id="history-table-body">
-            <tr><td>2025/7/22 10:34:20</td><td>观望</td><td>--</td><td>观望</td><td>--</td></tr>
-            <tr><td>2025/7/22 09:34:20</td><td>观望</td><td>--</td><td>观望</td><td>--</td></tr>
+            <tr><td colspan="5" class="text-center">加载历史数据中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -87,6 +91,7 @@
 
   <script>
     const API_BASE = "https://precious-metal-analyzer.aoyouios.workers.dev";
+    let goldBarChart, goldLineChart, silverBarChart, silverLineChart;
 
     // 1. 生成默认数据
     function generateData(type) {
@@ -95,7 +100,7 @@
       for (let i = 10; i >= 0; i--) {
         const c = +(base + (Math.random() - 0.5) * (type === 'gold' ? 1 : 0.1)).toFixed(2);
         data.push({
-          time: `T${i}`,
+          time: new Date(Date.now() - i * 3600000).toLocaleTimeString(),
           value: c
         });
       }
@@ -107,12 +112,12 @@
       const data = generateData('gold');
       
       // 主图表（柱状图）
-      new Chart(document.getElementById('gold-chart'), {
+      goldBarChart = new Chart(document.getElementById('gold-chart'), {
         type: 'bar',
         data: {
           labels: data.map(item => item.time),
           datasets: [{
-            label: '黄金价格',
+            label: '黄金价格（元/克）',
             data: data.map(item => item.value),
             backgroundColor: 'rgba(255, 215, 0, 0.7)'
           }]
@@ -127,7 +132,7 @@
       });
 
       // 分时图（折线图）
-      new Chart(document.getElementById('gold-line'), {
+      goldLineChart = new Chart(document.getElementById('gold-line'), {
         type: 'line',
         data: {
           labels: data.map(item => item.time),
@@ -151,12 +156,12 @@
       const data = generateData('silver');
       
       // 主图表（柱状图）
-      new Chart(document.getElementById('silver-chart'), {
+      silverBarChart = new Chart(document.getElementById('silver-chart'), {
         type: 'bar',
         data: {
           labels: data.map(item => item.time),
           datasets: [{
-            label: '白银价格',
+            label: '白银价格（元/克）',
             data: data.map(item => item.value),
             backgroundColor: 'rgba(192, 192, 192, 0.7)'
           }]
@@ -171,7 +176,7 @@
       });
 
       // 分时图（折线图）
-      new Chart(document.getElementById('silver-line'), {
+      silverLineChart = new Chart(document.getElementById('silver-line'), {
         type: 'line',
         data: {
           labels: data.map(item => item.time),
@@ -190,49 +195,150 @@
       });
     }
 
-    // 4. 加载真实数据更新图表
-    async function loadRealData() {
+    // 4. 格式化结果显示
+    function formatResult(result) {
+      if (!result) return '-';
+      switch(result) {
+        case 'profit': return '<span class="result-success"><i class="fa fa-check-circle"></i> 盈利</span>';
+        case 'loss': return '<span class="result-fail"><i class="fa fa-times-circle"></i> 亏损</span>';
+        case 'expired': return '<span class="result-expired"><i class="fa fa-exclamation-triangle"></i> 失效</span>';
+        case 'pending': return '<span class="result-pending"><i class="fa fa-clock-o"></i> 未完成</span>';
+        default: return '-';
+      }
+    }
+
+    // 5. 加载并显示历史建议
+    async function loadHistoryAdvice() {
+      try {
+        const res = await fetch(`${API_BASE}/advice-history`);
+        if (res.ok) {
+          const history = await res.json();
+          const tbody = document.getElementById('history-table-body');
+          
+          if (history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">暂无历史数据</td></tr>';
+            return;
+          }
+          
+          // 按时间戳倒序排列（最新的在前）
+          history.sort((a, b) => b.timestamp - a.timestamp);
+          
+          let html = '';
+          // 只显示最近10条
+          history.slice(0, 10).forEach(item => {
+            const time = new Date(item.timestamp).toLocaleString();
+            html += `
+              <tr>
+                <td>${time}</td>
+                <td>${item.gold.advice}</td>
+                <td>${formatResult(item.goldResult)}</td>
+                <td>${item.silver.advice}</td>
+                <td>${formatResult(item.silverResult)}</td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        }
+      } catch (e) {
+        console.error("加载历史建议失败：", e);
+        document.getElementById('history-table-body').innerHTML = 
+          '<tr><td colspan="5" class="text-center">加载历史数据失败</td></tr>';
+      }
+    }
+
+    // 6. 加载实时价格
+    async function loadRealTimePrice() {
+      try {
+        const res = await fetch(`${API_BASE}/data`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('gold-price').textContent = data.gold || '772.05';
+          document.getElementById('silver-price').textContent = data.silver || '8.78';
+          document.getElementById('gold-time').textContent = `更新时间：${data.updateTime || new Date().toLocaleString()}`;
+          document.getElementById('silver-time').textContent = `更新时间：${data.updateTime || new Date().toLocaleString()}`;
+        }
+      } catch (e) {
+        console.error("加载实时价格失败：", e);
+      }
+    }
+
+    // 7. 加载操作建议
+    async function loadAdvice() {
+      try {
+        const res = await fetch(`${API_BASE}/advice`);
+        if (res.ok) {
+          const advice = await res.json();
+          document.getElementById('advice').innerHTML = `
+            <div>黄金：${advice.gold.advice}（当前价：${advice.gold.entryPrice}，止盈：${advice.gold.takeProfit}，止损：${advice.gold.stopLoss}）</div>
+            <div>白银：${advice.silver.advice}（当前价：${advice.silver.entryPrice}，止盈：${advice.silver.takeProfit}，止损：${advice.silver.stopLoss}）</div>
+          `;
+        }
+      } catch (e) {
+        console.error("加载操作建议失败：", e);
+      }
+    }
+
+    // 8. 加载历史数据更新图表
+    async function loadHistoryData() {
       try {
         const res = await fetch(`${API_BASE}/history`);
         if (res.ok) {
           const history = await res.json();
-          // 用真实数据更新图表（如果有）
+          
+          // 更新黄金图表
           if (history.gold && history.gold.length > 0) {
-            updateChart('gold-chart', 'gold-line', history.gold);
+            const labels = history.gold.map(item => new Date(item.t).toLocaleTimeString());
+            const values = history.gold.map(item => item.c);
+            
+            goldBarChart.data.labels = labels;
+            goldBarChart.data.datasets[0].data = values;
+            goldBarChart.update();
+            
+            goldLineChart.data.labels = labels;
+            goldLineChart.data.datasets[0].data = values;
+            goldLineChart.update();
           }
+          
+          // 更新白银图表
           if (history.silver && history.silver.length > 0) {
-            updateChart('silver-chart', 'silver-line', history.silver);
+            const labels = history.silver.map(item => new Date(item.t).toLocaleTimeString());
+            const values = history.silver.map(item => item.c);
+            
+            silverBarChart.data.labels = labels;
+            silverBarChart.data.datasets[0].data = values;
+            silverBarChart.update();
+            
+            silverLineChart.data.labels = labels;
+            silverLineChart.data.datasets[0].data = values;
+            silverLineChart.update();
           }
         }
       } catch (e) {
-        console.log("真实数据加载失败，不影响显示");
+        console.error("加载历史数据失败：", e);
       }
     }
 
-    // 5. 更新图表数据
-    function updateChart(barId, lineId, data) {
-      const labels = data.map((_, i) => `T${i}`);
-      const values = data.map(item => item.c);
-      
-      // 更新柱状图
-      const barChart = Chart.getChart(barId);
-      barChart.data.labels = labels;
-      barChart.data.datasets[0].data = values;
-      barChart.update();
-
-      // 更新折线图
-      const lineChart = Chart.getChart(lineId);
-      lineChart.data.labels = labels;
-      lineChart.data.datasets[0].data = values;
-      lineChart.update();
-    }
-
-    // 页面加载后立即执行
+    // 页面加载后初始化
     window.onload = () => {
+      // 初始化图表（必显）
       initGoldCharts();
       initSilverCharts();
-      loadRealData(); // 后台更新真实数据
+      
+      // 加载其他数据
+      loadRealTimePrice();
+      loadAdvice();
+      loadHistoryAdvice();
+      loadHistoryData();
+      
+      // 定时刷新（每5分钟）
+      setInterval(() => {
+        loadRealTimePrice();
+        loadAdvice();
+        loadHistoryAdvice();
+        loadHistoryData();
+      }, 300000);
     };
   </script>
 </body>
 </html>
+    
