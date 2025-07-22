@@ -59,12 +59,6 @@
       height: 100% !important;
     }
     
-    /* 平滑曲线 */
-    .smooth-line { 
-      -webkit-transition: all 0.3s ease;
-      transition: all 0.3s ease;
-    }
-    
     /* 表格样式 */
     table { border-collapse: collapse; width: 100%; }
     .table-header {
@@ -73,16 +67,6 @@
       z-index: 2;
     }
     
-    /* 模型说明样式 */
-    .model-description {
-      background-color: #f5f5f7;
-      border: 1px solid #e2e2e7;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    /* 表格结果标签样式 */
     .result-tag {
       padding: 0.25rem 0.75rem;
       border-radius: 999px;
@@ -90,7 +74,6 @@
       font-weight: 500;
     }
     
-    /* 收益统计样式 */
     .profit-card {
       transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
@@ -163,7 +146,7 @@
         <div id="gold-chart-loading" class="chart-loading">
           <i class="fa fa-circle-o-notch fa-spin text-primary text-2xl"></i>
         </div>
-        <canvas id="gold-line" class="smooth-line"></canvas>
+        <canvas id="gold-line"></canvas>
         <div id="gold-chart-error" class="chart-loading hidden">
           <div class="text-center">
             <i class="fa fa-exclamation-triangle text-danger mb-2"></i>
@@ -186,7 +169,7 @@
         <div id="silver-chart-loading" class="chart-loading">
           <i class="fa fa-circle-o-notch fa-spin text-primary text-2xl"></i>
         </div>
-        <canvas id="silver-line" class="smooth-line"></canvas>
+        <canvas id="silver-line"></canvas>
         <div id="silver-chart-error" class="chart-loading hidden">
           <div class="text-center">
             <i class="fa fa-exclamation-triangle text-danger mb-2"></i>
@@ -270,144 +253,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 历史预测记录 -->
-    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
-      <h2 class="font-medium mb-4">历史预测记录（24小时）</h2>
-      
-      <!-- 对比模型详细说明 -->
-      <div class="model-description text-sm">
-        <h3 class="font-medium mb-3 text-primary">预测模型说明</h3>
-        <div class="space-y-2 text-neutral">
-          <p><strong>1. 模型核心逻辑：</strong>基于价格波动率、成交量变化率和RSI指标的多因子预测模型，通过分析过去24小时市场行为预测未来1-2小时价格走势。</p>
-          <p><strong>2. 预测周期：</strong>每个预测建议有效期为2小时，超过时效自动标记为"未到止盈止损点"。</p>
-          <p><strong>3. 结果判定标准：</strong></p>
-          <ul class="list-disc list-inside ml-4 space-y-1">
-            <li><strong>盈利：</strong>按建议操作后，价格达到止盈价或最大涨幅≥0.5%（黄金）/≥1%（白银）</li>
-            <li><strong>亏损：</strong>按建议操作后，价格触及止损价或最大跌幅≥0.5%（黄金）/≥1%（白银）</li>
-            <li><strong>未到止盈止损点：</strong>2小时内未达到盈利或亏损标准，或价格波动幅度＜0.2%</li>
-            <li><strong>--：</strong>建议为"观望"时无结果判定</li>
-          </ul>
-          <p><strong>4. 模型准确率：</strong>过去7天黄金预测准确率72.3%，白银预测准确率68.5%（基于历史数据回测）。</p>
-        </div>
-      </div>
-      
-      <div class="overflow-x-auto max-h-[400px]">
-        <table class="min-w-full text-sm">
-          <thead class="bg-apple-light table-header">
-            <tr>
-              <th class="px-4 py-3 text-left text-neutral font-medium">时间</th>
-              <th class="px-4 py-3 text-left text-neutral font-medium">黄金建议</th>
-              <th class="px-4 py-3 text-left text-neutral font-medium">黄金预测结果</th>
-              <th class="px-4 py-3 text-left text-neutral font-medium">白银建议</th>
-              <th class="px-4 py-3 text-left text-neutral font-medium">白银预测结果</th>
-            </tr>
-          </thead>
-          <tbody id="history-table">
-            <!-- 数据通过JS生成 -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 收益统计 -->
-    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
-      <h2 class="font-medium mb-6">收益统计（基于10000元本金）</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 当日收益 -->
-        <div class="profit-card p-6 border border-apple-border rounded-xl bg-white">
-          <h3 class="text-lg font-medium mb-4 flex items-center">
-            <i class="fa fa-calendar-check-o text-primary mr-2"></i>当日收益统计
-          </h3>
-          
-          <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <span class="block text-neutral text-sm mb-1">初始本金</span>
-                <span class="text-xl font-semibold">¥10,000.00</span>
-              </div>
-              <div>
-                <span class="block text-neutral text-sm mb-1">当前总资产</span>
-                <span class="text-xl font-semibold" id="daily-total">¥10,245.30</span>
-              </div>
-            </div>
-            
-            <div class="p-4 bg-apple-light rounded-lg">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-medium">当日总收益</span>
-                <span class="text-lg font-semibold text-success" id="daily-profit">+¥245.30 (2.45%)</span>
-              </div>
-              
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-neutral">黄金操作次数</span>
-                  <span id="daily-gold-operations">5次</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-neutral">白银操作次数</span>
-                  <span id="daily-silver-operations">3次</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-neutral">盈利操作占比</span>
-                  <span class="text-success" id="daily-profit-rate">62.5%</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="text-xs text-neutral italic">
-              统计说明：基于今日所有操作建议进行模拟交易，每次操作投入可用资金的50%，按止盈/止损点自动平仓
-            </div>
-          </div>
-        </div>
-        
-        <!-- 月度收益 -->
-        <div class="profit-card p-6 border border-apple-border rounded-xl bg-white">
-          <h3 class="text-lg font-medium mb-4 flex items-center">
-            <i class="fa fa-line-chart text-primary mr-2"></i>月度收益统计
-          </h3>
-          
-          <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <span class="block text-neutral text-sm mb-1">初始本金</span>
-                <span class="text-xl font-semibold">¥10,000.00</span>
-              </div>
-              <div>
-                <span class="block text-neutral text-sm mb-1">当前总资产</span>
-                <span class="text-xl font-semibold" id="monthly-total">¥13,872.65</span>
-              </div>
-            </div>
-            
-            <div class="p-4 bg-apple-light rounded-lg">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-medium">月度总收益</span>
-                <span class="text-lg font-semibold text-success" id="monthly-profit">+¥3,872.65 (38.73%)</span>
-              </div>
-              
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-neutral">交易总天数</span>
-                  <span id="monthly-days">22天</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-neutral">累计操作次数</span>
-                  <span id="monthly-operations">97次</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-neutral">平均日收益率</span>
-                  <span class="text-success" id="monthly-average-rate">1.76%</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="text-xs text-neutral italic">
-              统计说明：基于本月所有交易日操作建议进行模拟交易，采用与当日交易相同的资金管理策略
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
   <footer class="bg-apple-card border-t border-apple-border mt-8">
@@ -420,10 +265,8 @@
     // 全局变量
     let goldData = [], silverData = [];
     let goldLineChart = null, silverLineChart = null;
-    const HISTORY_API = "https://precious-metal-analyzer.aoyouios.workers.dev/history";
-    const TODAY = new Date().toISOString().split('T')[0]; // 今日日期（YYYY-MM-DD）
-    const INITIAL_CAPITAL = 10000; // 初始本金10000元
-    const DATA_INTERVAL = 300000; // 数据点时间间隔：5分钟（毫秒）
+    // 直接使用提供的历史数据
+    const PROVIDED_HISTORY = {"gold":[{"t":1753154646239,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154665850,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154703262,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154739985,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154871102,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154966906,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753154967567,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155007005,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155057626,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155260982,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155262034,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155339277,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155482399,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155694179,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753155694677,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753156184243,"o":772.05,"h":772.05,"l":772.05,"c":772.05},{"t":1753156559438,"o":772.05,"h":782.04,"l":772.05,"c":782.04},{"t":1753156588725,"o":782.04,"h":782.11,"l":782.04,"c":782.11},{"t":1753156622112,"o":782.11,"h":782.11,"l":782.09,"c":782.09},{"t":1753156643677,"o":782.09,"h":782.09,"l":781.91,"c":781.91},{"t":1753156915967,"o":781.91,"h":781.91,"l":781.9,"c":781.9},{"t":1753156943024,"o":781.9,"h":781.9,"l":781.9,"c":781.9},{"t":1753157216370,"o":781.9,"h":781.9,"l":781.45,"c":781.45},{"t":1753157246895,"o":781.45,"h":781.45,"l":781.25,"c":781.25},{"t":1753157376232,"o":781.25,"h":781.41,"l":781.25,"c":781.41},{"t":1753157512496,"o":781.41,"h":781.5,"l":781.41,"c":781.5},{"t":1753158105723,"o":781.5,"h":781.5,"l":781.29,"c":781.29},{"t":1753158109589,"o":781.29,"h":781.29,"l":781.29,"c":781.29},{"t":1753158344452,"o":781.29,"h":781.51,"l":781.29,"c":781.51},{"t":1753158456249,"o":781.51,"h":781.51,"l":781.44,"c":781.44},{"t":1753158645918,"o":781.44,"h":781.44,"l":781.32,"c":781.32},{"t":1753158756879,"o":781.32,"h":781.32,"l":781.31,"c":781.31},{"t":1753158797187,"o":781.31,"h":781.35,"l":781.31,"c":781.35},{"t":1753158943978,"o":781.35,"h":781.35,"l":781.26,"c":781.26},{"t":1753159058231,"o":781.26,"h":781.38,"l":781.26,"c":781.38},{"t":1753159097924,"o":781.38,"h":781.38,"l":781.29,"c":781.29},{"t":1753159243561,"o":781.29,"h":781.29,"l":781.09,"c":781.09},{"t":1753159398789,"o":781.09,"h":781.12,"l":781.09,"c":781.12},{"t":1753159543613,"o":781.12,"h":781.29,"l":781.12,"c":781.29},{"t":1753159697215,"o":781.29,"h":781.29,"l":781.13,"c":781.13},{"t":1753159857043,"o":781.13,"h":781.13,"l":781.09,"c":781.09},{"t":1753159957324,"o":781.09,"h":781.1,"l":781.09,"c":781.1},{"t":1753159996615,"o":781.1,"h":781.1,"l":781.1,"c":781.1},{"t":1753160158484,"o":781.1,"h":781.36,"l":781.1,"c":781.36},{"t":1753160255901,"o":781.36,"h":781.5,"l":781.36,"c":781.5},{"t":1753160336846,"o":781.5,"h":781.7,"l":781.5,"c":781.7},{"t":1753160458329,"o":781.7,"h":781.82,"l":781.7,"c":781.82},{"t":1753160636405,"o":781.82,"h":781.82,"l":781.26,"c":781.26},{"t":1753160757486,"o":781.26,"h":781.47,"l":781.26,"c":781.47},{"t":1753160865115,"o":781.47,"h":781.47,"l":781.35,"c":781.35},{"t":1753160937056,"o":781.35,"h":781.35,"l":781.27,"c":781.27},{"t":1753161056239,"o":781.27,"h":781.27,"l":781.24,"c":781.24},{"t":1753161155760,"o":781.24,"h":781.24,"l":781.18,"c":781.18},{"t":1753161236021,"o":781.18,"h":781.18,"l":781.06,"c":781.06},{"t":1753161356675,"o":781.06,"h":781.07,"l":781.06,"c":781.07},{"t":1753161456133,"o":781.07,"h":781.07,"l":780.88,"c":780.88},{"t":1753161536251,"o":780.88,"h":780.89,"l":780.88,"c":780.89},{"t":1753161656133,"o":780.89,"h":780.89,"l":780.87,"c":780.87},{"t":1753161757417,"o":780.87,"h":780.94,"l":780.87,"c":780.94},{"t":1753161956030,"o":780.94,"h":780.94,"l":780.91,"c":780.91},{"t":1753162055760,"o":780.91,"h":780.98,"l":780.91,"c":780.98},{"t":1753162138971,"o":780.98,"h":781.03,"l":780.98,"c":781.03},{"t":1753162258455,"o":781.03,"h":781.03,"l":780.93,"c":780.93},{"t":1753162357143,"o":780.93,"h":781.04,"l":780.93,"c":781.04},{"t":1753162436023,"o":781.04,"h":781.04,"l":781.01,"c":781.01},{"t":1753162557628,"o":781.01,"h":781.24,"l":781.01,"c":781.24},{"t":1753162742423,"o":781.24,"h":781.24,"l":780.91,"c":780.91},{"t":1753163037359,"o":780.91,"h":780.91,"l":780.65,"c":780.65},{"t":1753163155777,"o":780.65,"h":780.65,"l":780.55,"c":780.55},{"t":1753163255947,"o":780.55,"h":780.55,"l":780.5,"c":780.5},{"t":1753163336177,"o":780.5,"h":780.67,"l":780.5,"c":780.67},{"t":1753163457063,"o":780.67,"h":780.69,"l":780.67,"c":780.69},{"t":1753163555394,"o":780.69,"h":780.69,"l":780.55,"c":780.55},{"t":1753163636067,"o":780.55,"h":780.55,"l":780.5,"c":780.5},{"t":1753163756492,"o":780.5,"h":780.5,"l":780.3,"c":780.3},{"t":1753163855758,"o":780.3,"h":780.48,"l":780.3,"c":780.48},{"t":1753163936109,"o":780.48,"h":780.48,"l":780.42,"c":780.42},{"t":1753164157722,"o":780.42,"h":780.42,"l":780.3,"c":780.3},{"t":1753164355768,"o":780.3,"h":780.81,"l":780.3,"c":780.81},{"t":1753164535988,"o":780.81,"h":780.9,"l":780.81,"c":780.9},{"t":1753164655951,"o":780.9,"h":780.9,"l":780.73,"c":780.73},{"t":1753164756128,"o":780.73,"h":780.79,"l":780.73,"c":780.79},{"t":1753164837196,"o":780.79,"h":780.79,"l":780.7,"c":780.7},{"t":1753164955906,"o":780.7,"h":780.7,"l":780.68,"c":780.68},{"t":1753165056099,"o":780.68,"h":780.68,"l":780.67,"c":780.67},{"t":1753165135609,"o":780.67,"h":780.75,"l":780.67,"c":780.75},{"t":1753165256097,"o":780.75,"h":780.9,"l":780.75,"c":780.9},{"t":1753165358083,"o":780.9,"h":780.9,"l":780.63,"c":780.63},{"t":1753165435882,"o":780.63,"h":780.63,"l":780.56,"c":780.56},{"t":1753165654994,"o":780.56,"h":780.56,"l":780.46,"c":780.46},{"t":1753165737850,"o":780.46,"h":780.46,"l":780.33,"c":780.33},{"t":1753165857796,"o":780.33,"h":780.33,"l":780.32,"c":780.32},{"t":1753165955240,"o":780.32,"h":780.49,"l":780.32,"c":780.49},{"t":1753166036056,"o":780.49,"h":780.58,"l":780.49,"c":780.58},{"t":1753166157446,"o":780.58,"h":780.69,"l":780.58,"c":780.69},{"t":1753166256181,"o":780.69,"h":780.69,"l":780.39,"c":780.39},{"t":1753166338305,"o":780.39,"h":780.39,"l":780.31,"c":780.31},{"t":1753166456374,"o":780.31,"h":780.33,"l":780.31,"c":780.33},{"t":1753166556233,"o":780.33,"h":780.37,"l":780.33,"c":780.37},{"t":1753166596359,"o":780.37,"h":780.37,"l":780.34,"c":780.34},{"t":1753166818889,"o":780.34,"h":780.45,"l":780.34,"c":780.45},{"t":1753166823183,"o":780.45,"h":780.45,"l":780.45,"c":780.45},{"t":1753166935205,"o":780.45,"h":780.45,"l":780.4,"c":780.4},{"t":1753167551585,"o":780.4,"h":780.53,"l":780.4,"c":780.53},{"t":1753167563134,"o":780.53,"h":780.53,"l":780.52,"c":780.52},{"t":1753167579381,"o":780.52,"h":780.52,"l":780.46,"c":780.46},{"t":1753167599227,"o":780.46,"h":780.46,"l":780.44,"c":780.44},{"t":1753167918928,"o":780.44,"h":780.48,"l":780.44,"c":780.48},{"t":1753167963220,"o":780.48,"h":780.48,"l":780.37,"c":780.37},{"t":1753168612195,"o":780.37,"h":780.39,"l":780.37,"c":780.39},{"t":1753172863713,"o":780.39,"h":781.6,"l":780.39,"c":781.6},{"t":1753172898191,"o":781.6,"h":781.6,"l":781.52,"c":781.52},{"t":1753176066066,"o":781.52,"h":781.52,"l":781.18,"c":781.18},{"t":1753177356252,"o":781.18,"h":781.18,"l":780.96,"c":780.96}],"silver":[{"t":1753154646239,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154665850,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154703262,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154739985,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154871102,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154966906,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753154967567,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155007005,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155057626,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155260982,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155262034,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155339277,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155482399,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155694179,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753155694677,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753156184243,"o":8.78,"h":8.78,"l":8.78,"c":8.78},{"t":1753156559438,"o":8.78,"h":8.95,"l":8.78,"c":8.95},{"t":1753156588725,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753156622112,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753156643677,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753156915967,"o":8.95,"h":8.95,"l":8.94,"c":8.94},{"t":1753156943024,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753157216370,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753157246895,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753157376232,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753157512496,"o":8.94,"h":8.94,"l":8.93,"c":8.93},{"t":1753158105723,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158109589,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158344452,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158456249,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158645918,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158756879,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158797187,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753158943978,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753159058231,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753159097924,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753159243561,"o":8.93,"h":8.93,"l":8.92,"c":8.92},{"t":1753159398789,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753159543613,"o":8.92,"h":8.93,"l":8.92,"c":8.93},{"t":1753159697215,"o":8.93,"h":8.93,"l":8.92,"c":8.92},{"t":1753159857043,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753159957324,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753159996615,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753160158484,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753160255901,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753160336846,"o":8.92,"h":8.93,"l":8.92,"c":8.93},{"t":1753160458329,"o":8.93,"h":8.94,"l":8.93,"c":8.94},{"t":1753160636405,"o":8.94,"h":8.94,"l":8.92,"c":8.92},{"t":1753160757486,"o":8.92,"h":8.92,"l":8.92,"c":8.92},{"t":1753160865115,"o":8.92,"h":8.93,"l":8.92,"c":8.93},{"t":1753160937056,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753161056239,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753161155760,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753161236021,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753161356675,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753161456133,"o":8.93,"h":8.94,"l":8.93,"c":8.94},{"t":1753161536251,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753161656133,"o":8.94,"h":8.94,"l":8.93,"c":8.93},{"t":1753161757417,"o":8.93,"h":8.94,"l":8.93,"c":8.94},{"t":1753161956030,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162055760,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162138971,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162258455,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162357143,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162436023,"o":8.94,"h":8.94,"l":8.94,"c":8.94},{"t":1753162557628,"o":8.94,"h":8.95,"l":8.94,"c":8.95},{"t":1753162742423,"o":8.95,"h":8.95,"l":8.94,"c":8.94},{"t":1753163037359,"o":8.94,"h":8.94,"l":8.93,"c":8.93},{"t":1753163155777,"o":8.93,"h":8.93,"l":8.92,"c":8.92},{"t":1753163255947,"o":8.92,"h":8.93,"l":8.92,"c":8.93},{"t":1753163336177,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163457063,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163555394,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163636067,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163756492,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163855758,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753163936109,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753164157722,"o":8.93,"h":8.93,"l":8.93,"c":8.93},{"t":1753164355768,"o":8.93,"h":8.94,"l":8.93,"c":8.94},{"t":1753164535988,"o":8.94,"h":8.94,"l":8.93,"c":8.93},{"t":1753164655951,"o":8.93,"h":8.94,"l":8.93,"c":8.94},{"t":1753164756128,"o":8.94,"h":8.95,"l":8.94,"c":8.95},{"t":1753164837196,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753164955906,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753165056099,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753165135609,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753165256097,"o":8.95,"h":8.96,"l":8.95,"c":8.96},{"t":1753165358083,"o":8.96,"h":8.96,"l":8.95,"c":8.95},{"t":1753165435882,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753165654994,"o":8.95,"h":8.96,"l":8.95,"c":8.96},{"t":1753165737850,"o":8.96,"h":8.96,"l":8.95,"c":8.95},{"t":1753165857796,"o":8.95,"h":8.96,"l":8.95,"c":8.96},{"t":1753165955240,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166036056,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166157446,"o":8.96,"h":8.97,"l":8.96,"c":8.97},{"t":1753166256181,"o":8.97,"h":8.97,"l":8.96,"c":8.96},{"t":1753166338305,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166456374,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166556233,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166596359,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166818889,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166823183,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753166935205,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753167551585,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753167563134,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753167579381,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753167599227,"o":8.96,"h":8.96,"l":8.95,"c":8.95},{"t":1753167918928,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753167963220,"o":8.95,"h":8.95,"l":8.95,"c":8.95},{"t":1753168612195,"o":8.95,"h":8.96,"l":8.95,"c":8.96},{"t":1753172863713,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753172898191,"o":8.96,"h":8.96,"l":8.96,"c":8.96},{"t":1753176066066,"o":8.96,"h":8.96,"l":8.95,"c":8.95},{"t":1753177356252,"o":8.95,"h":8.95,"l":8.94,"c":8.94}]};
 
     // 1. 时间格式化
     function formatTime(timestamp) {
@@ -443,12 +286,7 @@
       return `${hours}:${minutes}`;
     }
 
-    // 3. 格式化金额
-    function formatCurrency(amount) {
-      return '¥' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-    }
-
-    // 4. 更新系统时间
+    // 3. 更新系统时间
     function updateSystemTime() {
       try {
         document.getElementById('system-time').textContent = new Date().toLocaleString();
@@ -460,178 +298,14 @@
     setInterval(updateSystemTime, 1000);
     updateSystemTime();
 
-    // 5. 计算收益统计
-    function calculateProfitStats() {
-      // 获取历史记录数据
-      const historyRows = document.querySelectorAll('#history-table tr');
-      const totalOperations = historyRows.length;
-      
-      // 模拟当日交易数据
-      let dailyProfit = 0;
-      let dailyGoldOps = 0;
-      let dailySilverOps = 0;
-      let dailyWinOps = 0;
-      
-      // 按历史记录模拟交易
-      historyRows.forEach(row => {
-        const goldAdvice = row.children[1].textContent.trim();
-        const goldResult = row.children[2].textContent.trim();
-        const silverAdvice = row.children[3].textContent.trim();
-        const silverResult = row.children[4].textContent.trim();
-        
-        // 计算黄金操作
-        if (goldAdvice !== '观望') {
-          dailyGoldOps++;
-          // 每次投入可用资金的50%
-          const investment = INITIAL_CAPITAL * 0.5;
-          
-          if (goldResult === '盈利') {
-            // 黄金盈利幅度：0.5%-2%之间随机
-            const profitRate = 0.005 + Math.random() * 0.015;
-            dailyProfit += investment * profitRate;
-            dailyWinOps++;
-          } else if (goldResult === '亏损') {
-            // 黄金亏损幅度：0.5%-1.5%之间随机
-            const lossRate = 0.005 + Math.random() * 0.01;
-            dailyProfit -= investment * lossRate;
-          }
-          // 未到止盈止损点不计算盈亏
-        }
-        
-        // 计算白银操作
-        if (silverAdvice !== '观望') {
-          dailySilverOps++;
-          // 每次投入可用资金的50%
-          const investment = INITIAL_CAPITAL * 0.5;
-          
-          if (silverResult === '盈利') {
-            // 白银盈利幅度：1%-3%之间随机
-            const profitRate = 0.01 + Math.random() * 0.02;
-            dailyProfit += investment * profitRate;
-            dailyWinOps++;
-          } else if (silverResult === '亏损') {
-            // 白银亏损幅度：1%-2%之间随机
-            const lossRate = 0.01 + Math.random() * 0.01;
-            dailyProfit -= investment * lossRate;
-          }
-          // 未到止盈止损点不计算盈亏
-        }
-      });
-      
-      // 计算当日统计数据
-      const dailyTotal = INITIAL_CAPITAL + dailyProfit;
-      const dailyProfitRate = (dailyProfit / INITIAL_CAPITAL * 100).toFixed(2);
-      const totalDailyOps = dailyGoldOps + dailySilverOps;
-      const dailyWinRate = totalDailyOps > 0 ? Math.round((dailyWinOps / totalDailyOps) * 100) + '%' : '0%';
-      
-      // 更新当日收益DOM
-      document.getElementById('daily-total').textContent = formatCurrency(dailyTotal);
-      document.getElementById('daily-profit').textContent = (dailyProfit >= 0 ? '+' : '') + formatCurrency(dailyProfit) + 
-                                                           ` (${dailyProfitRate}%)`;
-      document.getElementById('daily-profit').className = dailyProfit >= 0 ? 'text-lg font-semibold text-success' : 'text-lg font-semibold text-danger';
-      document.getElementById('daily-gold-operations').textContent = `${dailyGoldOps}次`;
-      document.getElementById('daily-silver-operations').textContent = `${dailySilverOps}次`;
-      document.getElementById('daily-profit-rate').textContent = dailyWinRate;
-      
-      // 计算月度收益（基于22个交易日，平均日收益1.7%）
-      const monthlyProfitRate = 0.38 + Math.random() * 0.05; // 38%-43%之间
-      const monthlyProfit = INITIAL_CAPITAL * monthlyProfitRate;
-      const monthlyTotal = INITIAL_CAPITAL + monthlyProfit;
-      const monthlyAverageRate = ((monthlyProfitRate * 100) / 22).toFixed(2) + '%';
-      
-      // 更新月度收益DOM
-      document.getElementById('monthly-total').textContent = formatCurrency(monthlyTotal);
-      document.getElementById('monthly-profit').textContent = `+${formatCurrency(monthlyProfit)} (${(monthlyProfitRate * 100).toFixed(2)}%)`;
-      document.getElementById('monthly-average-rate').textContent = monthlyAverageRate;
-    }
-
-    // 6. 处理历史数据（核心优化：确保时间连续）
+    // 4. 处理历史数据（保留原始数据点，不强制补全）
     function processHistoryData(rawData) {
-      if (!Array.isArray(rawData) || rawData.length === 0) return [];
-      
-      // 1. 过滤并排序数据
-      const filtered = rawData
+      return rawData
         .filter(item => item && typeof item.t === 'number' && typeof item.c === 'number')
-        .sort((a, b) => a.t - b.t);
-      
-      if (filtered.length < 2) return filtered;
-      
-      // 2. 填充缺失的数据点（核心优化）
-      const filledData = [filtered[0]];
-      const startT = filtered[0].t;
-      const endT = filtered[filtered.length - 1].t;
-      
-      // 按固定时间间隔（5分钟）填充数据
-      for (let t = startT + DATA_INTERVAL; t <= endT; t += DATA_INTERVAL) {
-        // 查找当前时间点前后的数据
-        const prevIndex = filtered.findLastIndex(item => item.t <= t);
-        const nextIndex = filtered.findIndex(item => item.t >= t);
-        
-        if (prevIndex !== -1 && nextIndex !== -1) {
-          const prev = filtered[prevIndex];
-          const next = filtered[nextIndex];
-          
-          // 计算插值（线性平滑）
-          const ratio = (t - prev.t) / (next.t - prev.t);
-          const interpolatedPrice = parseFloat((prev.c + (next.c - prev.c) * ratio).toFixed(2));
-          
-          filledData.push({
-            t: t,
-            c: interpolatedPrice,
-            o: filtered[0].o || filtered[0].c
-          });
-        }
-      }
-      
-      return filledData;
+        .sort((a, b) => a.t - b.t); // 仅按时间排序，不做插值
     }
 
-    // 7. 生成连续的模拟数据（当真实数据不可用时）
-    function generateContinuousMockData(type) {
-      const data = [];
-      const basePrice = type === 'gold' ? 762.5 : 8.80; // 今日开盘价
-      const now = new Date().getTime();
-      const startOfDay = new Date(TODAY).getTime() + 9 * 3600000; // 假设9:00开盘
-      
-      // 按固定5分钟间隔生成数据点
-      const totalPoints = Math.floor((now - startOfDay) / DATA_INTERVAL) + 1;
-      
-      // 生成平滑趋势
-      const trend = type === 'gold' ? 0.0008 : -0.0002; // 黄金微涨，白银微跌
-      let lastPrice = basePrice;
-      let volatilityFactor = 1; // 波动率因子，使曲线更自然
-      
-      for (let i = 0; i < totalPoints; i++) {
-        const timestamp = startOfDay + i * DATA_INTERVAL;
-        
-        // 模拟市场波动规律：上午波动大，下午趋缓
-        const hour = new Date(timestamp).getHours();
-        if (hour >= 9 && hour < 11) {
-          volatilityFactor = 1.5; // 早盘波动大
-        } else if (hour >= 15 && hour < 17) {
-          volatilityFactor = 1.2; // 晚盘波动较大
-        } else {
-          volatilityFactor = 0.8; // 午盘波动小
-        }
-        
-        // 生成平滑波动（基于前一个价格）
-        const volatility = type === 'gold' ? 0.12 * volatilityFactor : 0.012 * volatilityFactor;
-        const change = (Math.random() - 0.48) * volatility + trend; // 轻微偏向趋势
-        const currentPrice = parseFloat((lastPrice + change).toFixed(2));
-        
-        data.push({
-          t: timestamp,
-          c: currentPrice,
-          o: basePrice
-        });
-        
-        lastPrice = currentPrice;
-      }
-      
-      return data;
-    }
-
-    // 8. 更新数据信息（计数和时间范围）
+    // 5. 更新数据信息（计数和时间范围）
     function updateDataInfo(type) {
       const data = type === 'gold' ? goldData : silverData;
       if (data.length === 0) return;
@@ -643,22 +317,18 @@
       document.getElementById(type + '-time-range').textContent = `${firstTime} - ${lastTime}`;
     }
 
-    // 9. 更新价格显示（基于开盘价计算涨跌幅）
+    // 6. 更新价格显示
     function updatePriceDisplay() {
       // 处理黄金数据
       if (goldData.length > 0) {
         const latest = goldData[goldData.length - 1];
-        const openPrice = goldData[0].o || goldData[0].c; // 今日开盘价
+        const openPrice = goldData[0].o || goldData[0].c;
         const currentPrice = latest.c;
-        
-        // 计算涨跌幅（(现价-开盘价)/开盘价*100%）
         const changePercent = ((currentPrice - openPrice) / openPrice * 100).toFixed(2);
         
-        // 计算当日最高最低价
-        const highPrice = Math.max.apply(null, goldData.map(item => item.c));
-        const lowPrice = Math.min.apply(null, goldData.map(item => item.c));
+        const highPrice = Math.max.apply(null, goldData.map(item => item.h));
+        const lowPrice = Math.min.apply(null, goldData.map(item => item.l));
         
-        // 更新DOM
         document.getElementById('gold-price').textContent = currentPrice.toFixed(2);
         document.getElementById('gold-open').textContent = openPrice.toFixed(2);
         document.getElementById('gold-high').textContent = highPrice.toFixed(2);
@@ -673,17 +343,13 @@
       // 处理白银数据
       if (silverData.length > 0) {
         const latest = silverData[silverData.length - 1];
-        const openPrice = silverData[0].o || silverData[0].c; // 今日开盘价
+        const openPrice = silverData[0].o || silverData[0].c;
         const currentPrice = latest.c;
-        
-        // 计算涨跌幅
         const changePercent = ((currentPrice - openPrice) / openPrice * 100).toFixed(2);
         
-        // 计算当日最高最低价
-        const highPrice = Math.max.apply(null, silverData.map(item => item.c));
-        const lowPrice = Math.min.apply(null, silverData.map(item => item.c));
+        const highPrice = Math.max.apply(null, silverData.map(item => item.h));
+        const lowPrice = Math.min.apply(null, silverData.map(item => item.l));
         
-        // 更新DOM
         document.getElementById('silver-price').textContent = currentPrice.toFixed(2);
         document.getElementById('silver-open').textContent = openPrice.toFixed(2);
         document.getElementById('silver-high').textContent = highPrice.toFixed(2);
@@ -696,57 +362,65 @@
       }
     }
 
-    // 10. 初始化黄金图表（平滑曲线核心配置）
+    // 7. 初始化黄金图表（精确标注XY轴）
     function initGoldChart() {
       try {
         showLoading('gold');
         
         const ctx = document.getElementById('gold-line').getContext('2d');
         
-        // 销毁旧实例
         if (goldLineChart) {
           goldLineChart.destroy();
         }
         
-        // 准备数据
+        // 准备原始数据点
         const chartData = goldData.map(item => ({
           x: new Date(item.t),
           y: item.c
         }));
         
-        // 获取开盘价用于参考线
-        const openPrice = goldData[0]?.o || goldData[0]?.c || 0;
+        if (chartData.length === 0) {
+          throw new Error('无黄金数据');
+        }
         
-        // 创建图表（增强平滑度）
+        // 获取价格范围，放大波动显示
+        const prices = chartData.map(d => d.y);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const priceRange = maxPrice - minPrice;
+        // 价格轴上下留10%的余量，确保波动可见
+        const suggestedMin = priceRange > 0 ? minPrice - priceRange * 0.1 : minPrice - 0.5;
+        const suggestedMax = priceRange > 0 ? maxPrice + priceRange * 0.1 : maxPrice + 0.5;
+        
+        // 开盘价参考线
+        const openPrice = goldData[0].o || goldData[0].c;
+        
         goldLineChart = new Chart(ctx, {
           type: 'line',
           data: {
             datasets: [
-              // 价格曲线（核心优化：高平滑度）
               {
                 label: '黄金价格',
                 data: chartData,
                 borderColor: '#0071e3',
-                backgroundColor: 'rgba(0, 113, 227, 0.08)',
-                borderWidth: 2.5,
-                pointRadius: 0,       // 隐藏数据点
-                tension: 0.7,         // 高平滑度（0-1，值越大越平滑）
-                fill: true,
-                order: 1
+                backgroundColor: 'rgba(0, 113, 227, 0.05)',
+                borderWidth: 2,
+                pointRadius: 2,       // 显示数据点
+                pointHoverRadius: 5,  // 鼠标悬停放大
+                tension: 0.4,         // 适度平滑，保留原始趋势
+                fill: true
               },
-              // 开盘价参考线
               {
                 label: '开盘价',
-                data: chartData.length ? [
+                data: [
                   { x: chartData[0].x, y: openPrice },
                   { x: chartData[chartData.length - 1].x, y: openPrice }
-                ] : [],
+                ],
                 borderColor: '#86868b',
                 borderWidth: 1.5,
-                borderDash: [5, 5], // 虚线
+                borderDash: [5, 5],
                 pointRadius: 0,
-                fill: false,
-                order: 0
+                fill: false
               }
             ]
           },
@@ -759,10 +433,17 @@
             },
             plugins: {
               legend: {
-                display: false
+                display: true,
+                position: 'top',
+                labels: {
+                  boxWidth: 12,
+                  usePointStyle: true
+                }
               },
               tooltip: {
                 backgroundColor: 'rgba(29, 29, 31, 0.9)',
+                titleFont: { size: 13 },
+                bodyFont: { size: 13 },
                 callbacks: {
                   label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
                   title: ctx => formatTime(new Date(ctx[0].raw.x))
@@ -771,24 +452,40 @@
             },
             scales: {
               x: {
+                title: {
+                  display: true,
+                  text: '时间',
+                  color: '#86868b',
+                  font: { size: 12 }
+                },
                 grid: { display: false },
                 ticks: {
                   color: '#86868b',
-                  callback: value => formatHourMinute(new Date(this.getLabelForValue(value)))
+                  maxRotation: 0,
+                  callback: value => {
+                    const date = new Date(value);
+                    return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                  }
                 }
               },
               y: {
-                position: 'right',
+                title: {
+                  display: true,
+                  text: '价格（元/克）',
+                  color: '#86868b',
+                  font: { size: 12 }
+                },
                 grid: { color: 'rgba(0, 0, 0, 0.05)' },
                 ticks: {
                   color: '#86868b',
                   callback: v => v.toFixed(2)
-                }
+                },
+                suggestedMin: suggestedMin,
+                suggestedMax: suggestedMax
               }
             },
             animation: {
-              duration: 1500, // 平滑动画
-              easing: 'easeOutQuart'
+              duration: 1000
             }
           }
         });
@@ -803,57 +500,63 @@
       }
     }
 
-    // 11. 初始化白银图表（平滑曲线核心配置）
+    // 8. 初始化白银图表
     function initSilverChart() {
       try {
         showLoading('silver');
         
         const ctx = document.getElementById('silver-line').getContext('2d');
         
-        // 销毁旧实例
         if (silverLineChart) {
           silverLineChart.destroy();
         }
         
-        // 准备数据
         const chartData = silverData.map(item => ({
           x: new Date(item.t),
           y: item.c
         }));
         
-        // 获取开盘价用于参考线
-        const openPrice = silverData[0]?.o || silverData[0]?.c || 0;
+        if (chartData.length === 0) {
+          throw new Error('无白银数据');
+        }
         
-        // 创建图表（增强平滑度）
+        // 价格范围处理
+        const prices = chartData.map(d => d.y);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const priceRange = maxPrice - minPrice;
+        const suggestedMin = priceRange > 0 ? minPrice - priceRange * 0.1 : minPrice - 0.05;
+        const suggestedMax = priceRange > 0 ? maxPrice + priceRange * 0.1 : maxPrice + 0.05;
+        
+        // 开盘价参考线
+        const openPrice = silverData[0].o || silverData[0].c;
+        
         silverLineChart = new Chart(ctx, {
           type: 'line',
           data: {
             datasets: [
-              // 价格曲线（核心优化：高平滑度）
               {
                 label: '白银价格',
                 data: chartData,
                 borderColor: '#86868b',
-                backgroundColor: 'rgba(134, 134, 139, 0.08)',
-                borderWidth: 2.5,
-                pointRadius: 0,       // 隐藏数据点
-                tension: 0.7,         // 高平滑度
-                fill: true,
-                order: 1
+                backgroundColor: 'rgba(134, 134, 139, 0.05)',
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
               },
-              // 开盘价参考线
               {
                 label: '开盘价',
-                data: chartData.length ? [
+                data: [
                   { x: chartData[0].x, y: openPrice },
                   { x: chartData[chartData.length - 1].x, y: openPrice }
-                ] : [],
+                ],
                 borderColor: '#86868b',
                 borderWidth: 1.5,
                 borderDash: [5, 5],
                 pointRadius: 0,
-                fill: false,
-                order: 0
+                fill: false
               }
             ]
           },
@@ -865,9 +568,18 @@
               mode: 'index'
             },
             plugins: {
-              legend: { display: false },
+              legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                  boxWidth: 12,
+                  usePointStyle: true
+                }
+              },
               tooltip: {
                 backgroundColor: 'rgba(29, 29, 31, 0.9)',
+                titleFont: { size: 13 },
+                bodyFont: { size: 13 },
                 callbacks: {
                   label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
                   title: ctx => formatTime(new Date(ctx[0].raw.x))
@@ -876,24 +588,40 @@
             },
             scales: {
               x: {
+                title: {
+                  display: true,
+                  text: '时间',
+                  color: '#86868b',
+                  font: { size: 12 }
+                },
                 grid: { display: false },
                 ticks: {
                   color: '#86868b',
-                  callback: value => formatHourMinute(new Date(this.getLabelForValue(value)))
+                  maxRotation: 0,
+                  callback: value => {
+                    const date = new Date(value);
+                    return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                  }
                 }
               },
               y: {
-                position: 'right',
+                title: {
+                  display: true,
+                  text: '价格（元/克）',
+                  color: '#86868b',
+                  font: { size: 12 }
+                },
                 grid: { color: 'rgba(0, 0, 0, 0.05)' },
                 ticks: {
                   color: '#86868b',
                   callback: v => v.toFixed(2)
-                }
+                },
+                suggestedMin: suggestedMin,
+                suggestedMax: suggestedMax
               }
             },
             animation: {
-              duration: 1500,
-              easing: 'easeOutQuart'
+              duration: 1000
             }
           }
         });
@@ -908,162 +636,24 @@
       }
     }
 
-    // 12. 生成历史预测表格（24行）
-    function generateHistoryTable(rowCount) {
-      const tbody = document.getElementById('history-table');
-      tbody.innerHTML = '';
-      
-      for (let i = 0; i < rowCount; i++) {
-        const time = Date.now() - (i + 1) * 3600000; // 每小时一条记录
-        const goldAdvice = i % 5 === 0 ? '卖出' : i % 3 === 0 ? '观望' : '买入';
-        const silverAdvice = i % 4 === 0 ? '买入' : i % 6 === 0 ? '卖出' : '观望';
-        
-        // 预测结果（根据模型说明生成）
-        const goldResult = goldAdvice !== '观望' 
-          ? Math.random() > 0.4 ? '盈利' : Math.random() > 0.5 ? '亏损' : '未到止盈止损点' 
-          : '--';
-        const silverResult = silverAdvice !== '观望' 
-          ? Math.random() > 0.4 ? '盈利' : Math.random() > 0.5 ? '亏损' : '未到止盈止损点' 
-          : '--';
-        
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-apple-border hover:bg-apple-light/50 transition-colors';
-        
-        // 根据结果类型设置不同的样式
-        let goldResultClass = '';
-        if (goldResult === '盈利') {
-          goldResultClass = 'bg-success/10 text-success';
-        } else if (goldResult === '亏损') {
-          goldResultClass = 'bg-danger/10 text-danger';
-        } else if (goldResult === '未到止盈止损点') {
-          goldResultClass = 'bg-pending/10 text-pending';
-        }
-        
-        let silverResultClass = '';
-        if (silverResult === '盈利') {
-          silverResultClass = 'bg-success/10 text-success';
-        } else if (silverResult === '亏损') {
-          silverResultClass = 'bg-danger/10 text-danger';
-        } else if (silverResult === '未到止盈止损点') {
-          silverResultClass = 'bg-pending/10 text-pending';
-        }
-        
-        tr.innerHTML = `
-          <td class="px-4 py-3 font-medium">${formatTime(time)}</td>
-          <td class="px-4 py-3">
-            <span class="result-tag ${goldAdvice === '买入' ? 'bg-success/10 text-success' : 
-                                  goldAdvice === '卖出' ? 'bg-danger/10 text-danger' : 
-                                  'bg-neutral/10 text-neutral'}">
-              ${goldAdvice}
-            </span>
-          </td>
-          <td class="px-4 py-3">
-            ${goldResult !== '--' ? `<span class="result-tag ${goldResultClass}">${goldResult}</span>` : '--'}
-          </td>
-          <td class="px-4 py-3">
-            <span class="result-tag ${silverAdvice === '买入' ? 'bg-success/10 text-success' : 
-                                   silverAdvice === '卖出' ? 'bg-danger/10 text-danger' : 
-                                   'bg-neutral/10 text-neutral'}">
-              ${silverAdvice}
-            </span>
-          </td>
-          <td class="px-4 py-3">
-            ${silverResult !== '--' ? `<span class="result-tag ${silverResultClass}">${silverResult}</span>` : '--'}
-          </td>
-        `;
-        
-        tbody.appendChild(tr);
-      }
-    }
-
-    // 13. 获取并处理数据（核心优化：强化数据源处理）
-    async function fetchData() {
+    // 9. 加载数据（直接使用提供的历史数据）
+    function loadData() {
       try {
-        showLoading('gold');
-        showLoading('silver');
+        // 直接处理提供的历史数据
+        goldData = processHistoryData(PROVIDED_HISTORY.gold || []);
+        silverData = processHistoryData(PROVIDED_HISTORY.silver || []);
         
-        // 1. 尝试获取真实数据（带超时和重试）
-        let response;
-        try {
-          // 增加超时控制
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-          
-          response = await fetch(HISTORY_API, {
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-          });
-          
-          clearTimeout(timeoutId);
-        } catch (networkError) {
-          console.warn('网络请求失败，使用优化后的模拟数据:', networkError);
-          // 直接生成高质量模拟数据
-          goldData = generateContinuousMockData('gold');
-          silverData = generateContinuousMockData('silver');
-        }
-
-        // 2. 处理真实数据（如果请求成功）
-        if (response && response.ok) {
-          try {
-            const history = await response.json();
-            
-            // 验证数据格式
-            if (history && Array.isArray(history.gold) && Array.isArray(history.silver)) {
-              // 处理数据确保连续性
-              goldData = processHistoryData(history.gold);
-              silverData = processHistoryData(history.silver);
-              
-              // 数据点不足时补充
-              if (goldData.length < 10) {
-                goldData = generateContinuousMockData('gold');
-              }
-              if (silverData.length < 10) {
-                silverData = generateContinuousMockData('silver');
-              }
-            } else {
-              throw new Error('数据格式不符合预期');
-            }
-          } catch (parseError) {
-            console.error('数据解析失败:', parseError);
-            goldData = generateContinuousMockData('gold');
-            silverData = generateContinuousMockData('silver');
-          }
-        }
-
-        // 3. 确保数据排序和完整性
-        goldData.sort((a, b) => a.t - b.t);
-        silverData.sort((a, b) => a.t - b.t);
-
-        // 4. 更新UI
+        // 更新UI
         updateDataInfo('gold');
         updateDataInfo('silver');
         updatePriceDisplay();
         initGoldChart();
         initSilverChart();
-        generateHistoryTable(24);
-        calculateProfitStats();
-
+        
       } catch (error) {
-        console.error('数据处理主流程错误:', error);
-        // 兜底：生成高质量模拟数据
-        goldData = generateContinuousMockData('gold');
-        silverData = generateContinuousMockData('silver');
-        
-        updateDataInfo('gold');
-        updateDataInfo('silver');
-        updatePriceDisplay();
-        
-        try {
-          initGoldChart();
-          initSilverChart();
-        } catch (chartErr) {
-          console.error('图表初始化失败:', chartErr);
-          showError('gold');
-          showError('silver');
-        }
-        
-        generateHistoryTable(24);
-        calculateProfitStats();
+        console.error('数据加载失败:', error);
+        showError('gold');
+        showError('silver');
       }
     }
 
@@ -1084,22 +674,13 @@
     // 初始化页面
     function init() {
       // 绑定刷新按钮事件
-      document.getElementById('refresh-gold').addEventListener('click', () => fetchData());
-      document.getElementById('refresh-silver').addEventListener('click', () => fetchData());
+      document.getElementById('refresh-gold').addEventListener('click', () => {
+        initGoldChart();
+      });
+      document.getElementById('refresh-silver').addEventListener('click', () => {
+        initSilverChart();
+      });
       
-      // 首次加载数据
-      fetchData();
-      
-      // 定时刷新（5分钟）
-      setInterval(fetchData, DATA_INTERVAL);
+      // 加载数据
+      loadData();
     }
-
-    // 确保DOM加载完成后初始化
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      init();
-    } else {
-      document.addEventListener('DOMContentLoaded', init);
-    }
-  </script>
-</body>
-</html>
