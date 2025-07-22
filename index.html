@@ -203,7 +203,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="p-5 border border-apple-border rounded-lg">
           <h3 class="font-medium mb-4 flex items-center">
-            <i class="fa fa-gold text-primary mr-2"></i>黄金操作建议
+            <i class="fa fa-diamond text-primary mr-2"></i>黄金操作建议
           </h3>
           
           <div class="space-y-4 text-sm">
@@ -237,7 +237,7 @@
         
         <div class="p-5 border border-apple-border rounded-lg">
           <h3 class="font-medium mb-4 flex items-center">
-            <i class="fa fa-silver text-primary mr-2"></i>白银操作建议
+            <i class="fa fa-cubes text-primary mr-2"></i>白银操作建议
           </h3>
           
           <div class="space-y-4 text-sm">
@@ -423,6 +423,7 @@
     const HISTORY_API = "https://precious-metal-analyzer.aoyouios.workers.dev/history";
     const TODAY = new Date().toISOString().split('T')[0]; // 今日日期（YYYY-MM-DD）
     const INITIAL_CAPITAL = 10000; // 初始本金10000元
+    const DATA_INTERVAL = 300000; // 数据点时间间隔：5分钟（毫秒）
 
     // 1. 时间格式化
     function formatTime(timestamp) {
@@ -544,122 +545,84 @@
       document.getElementById('monthly-average-rate').textContent = monthlyAverageRate;
     }
 
-    // 6. 获取数据（仅保留今日数据）
-    async function fetchData() {
-      try {
-        showLoading('gold');
-        showLoading('silver');
+    // 6. 处理历史数据（核心优化：确保时间连续）
+    function processHistoryData(rawData) {
+      if (!Array.isArray(rawData) || rawData.length === 0) return [];
+      
+      // 1. 过滤并排序数据
+      const filtered = rawData
+        .filter(item => item && typeof item.t === 'number' && typeof item.c === 'number')
+        .sort((a, b) => a.t - b.t);
+      
+      if (filtered.length < 2) return filtered;
+      
+      // 2. 填充缺失的数据点（核心优化）
+      const filledData = [filtered[0]];
+      const startT = filtered[0].t;
+      const endT = filtered[filtered.length - 1].t;
+      
+      // 按固定时间间隔（5分钟）填充数据
+      for (let t = startT + DATA_INTERVAL; t <= endT; t += DATA_INTERVAL) {
+        // 查找当前时间点前后的数据
+        const prevIndex = filtered.findLastIndex(item => item.t <= t);
+        const nextIndex = filtered.findIndex(item => item.t >= t);
         
-        // 获取数据
-        const response = await fetch(HISTORY_API);
-        if (!response.ok) throw new Error('网络响应不正常');
-        
-        const history = await response.json();
-        
-        // 筛选今日数据（从当天00:00到现在）
-        const todayStart = new Date(TODAY).getTime();
-        const todayEnd = new Date(TODAY).getTime() + 86400000; // 当天24:00
-        
-        // 处理黄金数据
-        goldData = Array.isArray(history.gold) 
-          ? history.gold.filter(function(item) {
-              return item.t >= todayStart && item.t < todayEnd;
-            })
-          : [];
-        
-        // 处理白银数据
-        silverData = Array.isArray(history.silver)
-          ? history.silver.filter(function(item) {
-              return item.t >= todayStart && item.t < todayEnd;
-            })
-          : [];
-        
-        // 补充今日模拟数据（确保完整的一天数据）
-        if (goldData.length < 1) {
-          // 首次加载或无数据时，生成完整的今日数据
-          goldData = generateTodayMockData('gold');
-        } else {
-          // 有部分数据时，补充完整
-          goldData = supplementTodayData('gold', goldData);
+        if (prevIndex !== -1 && nextIndex !== -1) {
+          const prev = filtered[prevIndex];
+          const next = filtered[nextIndex];
+          
+          // 计算插值（线性平滑）
+          const ratio = (t - prev.t) / (next.t - prev.t);
+          const interpolatedPrice = parseFloat((prev.c + (next.c - prev.c) * ratio).toFixed(2));
+          
+          filledData.push({
+            t: t,
+            c: interpolatedPrice,
+            o: filtered[0].o || filtered[0].c
+          });
         }
-        
-        if (silverData.length < 1) {
-          silverData = generateTodayMockData('silver');
-        } else {
-          silverData = supplementTodayData('silver', silverData);
-        }
-        
-        // 按时间排序
-        goldData.sort(function(a, b) { return a.t - b.t; });
-        silverData.sort(function(a, b) { return a.t - b.t; });
-        
-        // 更新数据计数和时间范围
-        updateDataInfo('gold');
-        updateDataInfo('silver');
-        
-        // 更新价格显示（基于开盘价计算涨跌幅）
-        updatePriceDisplay();
-        
-        // 初始化图表
-        initGoldChart();
-        initSilverChart();
-        
-        // 生成历史记录
-        generateHistoryTable(24);
-        
-        // 计算收益统计
-        calculateProfitStats();
-        
-      } catch (e) {
-        console.error('数据获取失败:', e);
-        // 全量生成今日模拟数据
-        goldData = generateTodayMockData('gold');
-        silverData = generateTodayMockData('silver');
-        
-        updateDataInfo('gold');
-        updateDataInfo('silver');
-        updatePriceDisplay();
-        
-        try {
-          initGoldChart();
-          initSilverChart();
-        } catch (chartErr) {
-          console.error('图表初始化失败:', chartErr);
-          showError('gold');
-          showError('silver');
-        }
-        
-        generateHistoryTable(24);
-        calculateProfitStats();
       }
+      
+      return filledData;
     }
 
-    // 7. 生成完整的今日模拟数据（从开盘到现在）
-    function generateTodayMockData(type) {
+    // 7. 生成连续的模拟数据（当真实数据不可用时）
+    function generateContinuousMockData(type) {
       const data = [];
       const basePrice = type === 'gold' ? 762.5 : 8.80; // 今日开盘价
       const now = new Date().getTime();
       const startOfDay = new Date(TODAY).getTime() + 9 * 3600000; // 假设9:00开盘
       
-      // 计算需要多少个数据点（每5分钟一个点）
-      const minutesPerPoint = 5;
-      const totalPoints = Math.floor((now - startOfDay) / (minutesPerPoint * 60000)) + 1;
+      // 按固定5分钟间隔生成数据点
+      const totalPoints = Math.floor((now - startOfDay) / DATA_INTERVAL) + 1;
       
-      // 生成趋势（黄金上涨，白银微跌）
-      const trend = type === 'gold' ? 0.0005 : -0.0001;
+      // 生成平滑趋势
+      const trend = type === 'gold' ? 0.0008 : -0.0002; // 黄金微涨，白银微跌
       let lastPrice = basePrice;
+      let volatilityFactor = 1; // 波动率因子，使曲线更自然
       
       for (let i = 0; i < totalPoints; i++) {
-        const timestamp = startOfDay + i * minutesPerPoint * 60000;
-        // 控制波动范围，确保曲线平滑
-        const volatility = type === 'gold' ? 0.15 : 0.015;
-        const change = (Math.random() - 0.45) * volatility + trend;
+        const timestamp = startOfDay + i * DATA_INTERVAL;
+        
+        // 模拟市场波动规律：上午波动大，下午趋缓
+        const hour = new Date(timestamp).getHours();
+        if (hour >= 9 && hour < 11) {
+          volatilityFactor = 1.5; // 早盘波动大
+        } else if (hour >= 15 && hour < 17) {
+          volatilityFactor = 1.2; // 晚盘波动较大
+        } else {
+          volatilityFactor = 0.8; // 午盘波动小
+        }
+        
+        // 生成平滑波动（基于前一个价格）
+        const volatility = type === 'gold' ? 0.12 * volatilityFactor : 0.012 * volatilityFactor;
+        const change = (Math.random() - 0.48) * volatility + trend; // 轻微偏向趋势
         const currentPrice = parseFloat((lastPrice + change).toFixed(2));
         
         data.push({
           t: timestamp,
           c: currentPrice,
-          o: basePrice // 记录开盘价
+          o: basePrice
         });
         
         lastPrice = currentPrice;
@@ -668,64 +631,7 @@
       return data;
     }
 
-    // 8. 补充今日数据（确保数据完整）
-    function supplementTodayData(type, existingData) {
-      if (existingData.length === 0) return generateTodayMockData(type);
-      
-      const data = [...existingData];
-      const startOfDay = new Date(TODAY).getTime() + 9 * 3600000; // 9:00开盘
-      const now = new Date().getTime();
-      const minutesPerPoint = 5;
-      
-      // 确保有开盘价记录
-      const openPrice = existingData[0].o || existingData[0].c;
-      
-      // 检查最早的点是否是开盘时间
-      const firstTimestamp = data[0].t;
-      if (firstTimestamp > startOfDay) {
-        // 在现有数据前补充开盘到第一个数据点之间的数据
-        const pointsToAdd = Math.floor((firstTimestamp - startOfDay) / (minutesPerPoint * 60000));
-        for (let i = pointsToAdd; i > 0; i--) {
-          const timestamp = startOfDay + (i - 1) * minutesPerPoint * 60000;
-          // 从开盘价平滑过渡到第一个数据点价格
-          const ratio = i / pointsToAdd;
-          const price = parseFloat((openPrice + (data[0].c - openPrice) * (1 - ratio)).toFixed(2));
-          
-          data.unshift({
-            t: timestamp,
-            c: price,
-            o: openPrice
-          });
-        }
-      }
-      
-      // 检查最新的点是否是当前时间
-      const lastTimestamp = data[data.length - 1].t;
-      if (lastTimestamp < now - minutesPerPoint * 60000) {
-        // 在现有数据后补充到当前时间的数据
-        const pointsToAdd = Math.floor((now - lastTimestamp) / (minutesPerPoint * 60000));
-        const lastPrice = data[data.length - 1].c;
-        
-        for (let i = 1; i <= pointsToAdd; i++) {
-          const timestamp = lastTimestamp + i * minutesPerPoint * 60000;
-          // 基于最后价格生成合理波动
-          const trend = type === 'gold' ? 0.0005 : -0.0001;
-          const volatility = type === 'gold' ? 0.15 : 0.015;
-          const change = (Math.random() - 0.45) * volatility + trend;
-          const currentPrice = parseFloat((lastPrice + change).toFixed(2));
-          
-          data.push({
-            t: timestamp,
-            c: currentPrice,
-            o: openPrice
-          });
-        }
-      }
-      
-      return data;
-    }
-
-    // 9. 更新数据信息（计数和时间范围）
+    // 8. 更新数据信息（计数和时间范围）
     function updateDataInfo(type) {
       const data = type === 'gold' ? goldData : silverData;
       if (data.length === 0) return;
@@ -737,7 +643,7 @@
       document.getElementById(type + '-time-range').textContent = `${firstTime} - ${lastTime}`;
     }
 
-    // 10. 更新价格显示（基于开盘价计算涨跌幅）
+    // 9. 更新价格显示（基于开盘价计算涨跌幅）
     function updatePriceDisplay() {
       // 处理黄金数据
       if (goldData.length > 0) {
@@ -749,8 +655,8 @@
         const changePercent = ((currentPrice - openPrice) / openPrice * 100).toFixed(2);
         
         // 计算当日最高最低价
-        const highPrice = Math.max.apply(null, goldData.map(function(item) { return item.c; }));
-        const lowPrice = Math.min.apply(null, goldData.map(function(item) { return item.c; }));
+        const highPrice = Math.max.apply(null, goldData.map(item => item.c));
+        const lowPrice = Math.min.apply(null, goldData.map(item => item.c));
         
         // 更新DOM
         document.getElementById('gold-price').textContent = currentPrice.toFixed(2);
@@ -774,8 +680,8 @@
         const changePercent = ((currentPrice - openPrice) / openPrice * 100).toFixed(2);
         
         // 计算当日最高最低价
-        const highPrice = Math.max.apply(null, silverData.map(function(item) { return item.c; }));
-        const lowPrice = Math.min.apply(null, silverData.map(function(item) { return item.c; }));
+        const highPrice = Math.max.apply(null, silverData.map(item => item.c));
+        const lowPrice = Math.min.apply(null, silverData.map(item => item.c));
         
         // 更新DOM
         document.getElementById('silver-price').textContent = currentPrice.toFixed(2);
@@ -790,7 +696,7 @@
       }
     }
 
-    // 11. 初始化黄金图表
+    // 10. 初始化黄金图表（平滑曲线核心配置）
     function initGoldChart() {
       try {
         showLoading('gold');
@@ -803,170 +709,41 @@
         }
         
         // 准备数据
-        const chartData = goldData.map(function(item) {
-          return {
-            x: new Date(item.t),
-            y: item.c
-          };
-        });
+        const chartData = goldData.map(item => ({
+          x: new Date(item.t),
+          y: item.c
+        }));
         
         // 获取开盘价用于参考线
-        const openPrice = goldData[0].o || goldData[0].c;
+        const openPrice = goldData[0]?.o || goldData[0]?.c || 0;
         
-        // 创建图表
+        // 创建图表（增强平滑度）
         goldLineChart = new Chart(ctx, {
           type: 'line',
           data: {
             datasets: [
-              // 价格曲线
+              // 价格曲线（核心优化：高平滑度）
               {
                 label: '黄金价格',
                 data: chartData,
                 borderColor: '#0071e3',
                 backgroundColor: 'rgba(0, 113, 227, 0.08)',
                 borderWidth: 2.5,
-                pointRadius: 0,
-                tension: 0.5,
+                pointRadius: 0,       // 隐藏数据点
+                tension: 0.7,         // 高平滑度（0-1，值越大越平滑）
                 fill: true,
                 order: 1
               },
               // 开盘价参考线
               {
                 label: '开盘价',
-                data: chartData.map(function(point, index) {
-                  // 只需要两个点就能画一条水平线
-                  return index === 0 || index === chartData.length - 1 
-                    ? { x: point.x, y: openPrice } 
-                    : null;
-                }).filter(function(point) { return point !== null; }),
+                data: chartData.length ? [
+                  { x: chartData[0].x, y: openPrice },
+                  { x: chartData[chartData.length - 1].x, y: openPrice }
+                ] : [],
                 borderColor: '#86868b',
                 borderWidth: 1.5,
                 borderDash: [5, 5], // 虚线
-                pointRadius: 0,
-                fill: false,
-                order: 0 // 放在价格曲线下方
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            },
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                backgroundColor: 'rgba(29, 29, 31, 0.9)',
-                callbacks: {
-                  label: function(ctx) {
-                    if (ctx.datasetIndex === 0) {
-                      return '价格: ' + ctx.raw.y.toFixed(2) + ' 元/克';
-                    }
-                    return false;
-                  },
-                  title: function(ctx) {
-                    return formatTime(new Date(ctx[0].raw.x));
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false
-                },
-                ticks: {
-                  color: '#86868b',
-                  callback: function(value) {
-                    // x轴只显示小时:分钟
-                    return formatHourMinute(new Date(this.getLabelForValue(value)));
-                  }
-                }
-              },
-              y: {
-                position: 'right',
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  color: '#86868b',
-                  callback: function(v) {
-                    return v.toFixed(2);
-                  }
-                }
-              }
-            },
-            animation: {
-              duration: 1000
-            }
-          }
-        });
-        
-        hideLoading('gold');
-        hideError('gold');
-        
-      } catch (e) {
-        console.error('黄金图表初始化失败:', e);
-        hideLoading('gold');
-        showError('gold');
-      }
-    }
-
-    // 12. 初始化白银图表
-    function initSilverChart() {
-      try {
-        showLoading('silver');
-        
-        const ctx = document.getElementById('silver-line').getContext('2d');
-        
-        // 销毁旧实例
-        if (silverLineChart) {
-          silverLineChart.destroy();
-        }
-        
-        // 准备数据
-        const chartData = silverData.map(function(item) {
-          return {
-            x: new Date(item.t),
-            y: item.c
-          };
-        });
-        
-        // 获取开盘价用于参考线
-        const openPrice = silverData[0].o || silverData[0].c;
-        
-        // 创建图表
-        silverLineChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            datasets: [
-              // 价格曲线
-              {
-                label: '白银价格',
-                data: chartData,
-                borderColor: '#86868b',
-                backgroundColor: 'rgba(134, 134, 139, 0.08)',
-                borderWidth: 2.5,
-                pointRadius: 0,
-                tension: 0.5,
-                fill: true,
-                order: 1
-              },
-              // 开盘价参考线
-              {
-                label: '开盘价',
-                data: chartData.map(function(point, index) {
-                  return index === 0 || index === chartData.length - 1 
-                    ? { x: point.x, y: openPrice } 
-                    : null;
-                }).filter(function(point) { return point !== null; }),
-                borderColor: '#86868b',
-                borderWidth: 1.5,
-                borderDash: [5, 5],
                 pointRadius: 0,
                 fill: false,
                 order: 0
@@ -987,45 +764,136 @@
               tooltip: {
                 backgroundColor: 'rgba(29, 29, 31, 0.9)',
                 callbacks: {
-                  label: function(ctx) {
-                    if (ctx.datasetIndex === 0) {
-                      return '价格: ' + ctx.raw.y.toFixed(2) + ' 元/克';
-                    }
-                    return false;
-                  },
-                  title: function(ctx) {
-                    return formatTime(new Date(ctx[0].raw.x));
-                  }
+                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
+                  title: ctx => formatTime(new Date(ctx[0].raw.x))
                 }
               }
             },
             scales: {
               x: {
-                grid: {
-                  display: false
-                },
+                grid: { display: false },
                 ticks: {
                   color: '#86868b',
-                  callback: function(value) {
-                    return formatHourMinute(new Date(this.getLabelForValue(value)));
-                  }
+                  callback: value => formatHourMinute(new Date(this.getLabelForValue(value)))
                 }
               },
               y: {
                 position: 'right',
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
                 ticks: {
                   color: '#86868b',
-                  callback: function(v) {
-                    return v.toFixed(2);
-                  }
+                  callback: v => v.toFixed(2)
                 }
               }
             },
             animation: {
-              duration: 1000
+              duration: 1500, // 平滑动画
+              easing: 'easeOutQuart'
+            }
+          }
+        });
+        
+        hideLoading('gold');
+        hideError('gold');
+        
+      } catch (e) {
+        console.error('黄金图表初始化失败:', e);
+        hideLoading('gold');
+        showError('gold');
+      }
+    }
+
+    // 11. 初始化白银图表（平滑曲线核心配置）
+    function initSilverChart() {
+      try {
+        showLoading('silver');
+        
+        const ctx = document.getElementById('silver-line').getContext('2d');
+        
+        // 销毁旧实例
+        if (silverLineChart) {
+          silverLineChart.destroy();
+        }
+        
+        // 准备数据
+        const chartData = silverData.map(item => ({
+          x: new Date(item.t),
+          y: item.c
+        }));
+        
+        // 获取开盘价用于参考线
+        const openPrice = silverData[0]?.o || silverData[0]?.c || 0;
+        
+        // 创建图表（增强平滑度）
+        silverLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              // 价格曲线（核心优化：高平滑度）
+              {
+                label: '白银价格',
+                data: chartData,
+                borderColor: '#86868b',
+                backgroundColor: 'rgba(134, 134, 139, 0.08)',
+                borderWidth: 2.5,
+                pointRadius: 0,       // 隐藏数据点
+                tension: 0.7,         // 高平滑度
+                fill: true,
+                order: 1
+              },
+              // 开盘价参考线
+              {
+                label: '开盘价',
+                data: chartData.length ? [
+                  { x: chartData[0].x, y: openPrice },
+                  { x: chartData[chartData.length - 1].x, y: openPrice }
+                ] : [],
+                borderColor: '#86868b',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false,
+                order: 0
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(29, 29, 31, 0.9)',
+                callbacks: {
+                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
+                  title: ctx => formatTime(new Date(ctx[0].raw.x))
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: '#86868b',
+                  callback: value => formatHourMinute(new Date(this.getLabelForValue(value)))
+                }
+              },
+              y: {
+                position: 'right',
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                  color: '#86868b',
+                  callback: v => v.toFixed(2)
+                }
+              }
+            },
+            animation: {
+              duration: 1500,
+              easing: 'easeOutQuart'
             }
           }
         });
@@ -1040,7 +908,7 @@
       }
     }
 
-    // 13. 生成历史预测表格（24行）
+    // 12. 生成历史预测表格（24行）
     function generateHistoryTable(rowCount) {
       const tbody = document.getElementById('history-table');
       tbody.innerHTML = '';
@@ -1108,6 +976,97 @@
       }
     }
 
+    // 13. 获取并处理数据（核心优化：强化数据源处理）
+    async function fetchData() {
+      try {
+        showLoading('gold');
+        showLoading('silver');
+        
+        // 1. 尝试获取真实数据（带超时和重试）
+        let response;
+        try {
+          // 增加超时控制
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+          
+          response = await fetch(HISTORY_API, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+          });
+          
+          clearTimeout(timeoutId);
+        } catch (networkError) {
+          console.warn('网络请求失败，使用优化后的模拟数据:', networkError);
+          // 直接生成高质量模拟数据
+          goldData = generateContinuousMockData('gold');
+          silverData = generateContinuousMockData('silver');
+        }
+
+        // 2. 处理真实数据（如果请求成功）
+        if (response && response.ok) {
+          try {
+            const history = await response.json();
+            
+            // 验证数据格式
+            if (history && Array.isArray(history.gold) && Array.isArray(history.silver)) {
+              // 处理数据确保连续性
+              goldData = processHistoryData(history.gold);
+              silverData = processHistoryData(history.silver);
+              
+              // 数据点不足时补充
+              if (goldData.length < 10) {
+                goldData = generateContinuousMockData('gold');
+              }
+              if (silverData.length < 10) {
+                silverData = generateContinuousMockData('silver');
+              }
+            } else {
+              throw new Error('数据格式不符合预期');
+            }
+          } catch (parseError) {
+            console.error('数据解析失败:', parseError);
+            goldData = generateContinuousMockData('gold');
+            silverData = generateContinuousMockData('silver');
+          }
+        }
+
+        // 3. 确保数据排序和完整性
+        goldData.sort((a, b) => a.t - b.t);
+        silverData.sort((a, b) => a.t - b.t);
+
+        // 4. 更新UI
+        updateDataInfo('gold');
+        updateDataInfo('silver');
+        updatePriceDisplay();
+        initGoldChart();
+        initSilverChart();
+        generateHistoryTable(24);
+        calculateProfitStats();
+
+      } catch (error) {
+        console.error('数据处理主流程错误:', error);
+        // 兜底：生成高质量模拟数据
+        goldData = generateContinuousMockData('gold');
+        silverData = generateContinuousMockData('silver');
+        
+        updateDataInfo('gold');
+        updateDataInfo('silver');
+        updatePriceDisplay();
+        
+        try {
+          initGoldChart();
+          initSilverChart();
+        } catch (chartErr) {
+          console.error('图表初始化失败:', chartErr);
+          showError('gold');
+          showError('silver');
+        }
+        
+        generateHistoryTable(24);
+        calculateProfitStats();
+      }
+    }
+
     // 辅助函数：显示/隐藏加载和错误状态
     function showLoading(type) {
       document.getElementById(type + '-chart-loading').classList.remove('hidden');
@@ -1124,18 +1083,18 @@
 
     // 初始化页面
     function init() {
-      document.getElementById('refresh-gold').addEventListener('click', function() {
-        fetchData();
-      });
-      document.getElementById('refresh-silver').addEventListener('click', function() {
-        fetchData();
-      });
+      // 绑定刷新按钮事件
+      document.getElementById('refresh-gold').addEventListener('click', () => fetchData());
+      document.getElementById('refresh-silver').addEventListener('click', () => fetchData());
       
+      // 首次加载数据
       fetchData();
-      setInterval(fetchData, 300000); // 5分钟刷新一次
+      
+      // 定时刷新（5分钟）
+      setInterval(fetchData, DATA_INTERVAL);
     }
 
-    // 确保DOM加载完成
+    // 确保DOM加载完成后初始化
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
       init();
     } else {
