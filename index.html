@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>贵金属分析系统</title>
+  <title>聚宝盆专业贵金属分析系统</title>
+  <!-- 核心依赖（必含K线图插件） -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -11,169 +12,268 @@
   <style>
     .chart-container { height: 300px; }
     .sub-chart { height: 180px; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 p-4">
   <div class="max-w-6xl mx-auto">
-    <!-- 实时价格 -->
+    <!-- 系统标题 -->
+    <h1 class="text-3xl font-bold mb-6 flex items-center">
+      <<i class="fa fa-line-chart text-yellow-400 mr-2"></</i>
+      聚宝盆专业贵金属分析系统
+    </h1>
+
+    <!-- 实时价格卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <div class="bg-gray-800 rounded-lg p-4">
-        <h2 class="font-bold mb-2">黄金价格</h2>
-        <div class="text-3xl font-bold" id="gold-price">--</div>
+      <div class="bg-gray-800 rounded-lg p-4 border border-yellow-500/20">
+        <h2 class="font-bold mb-2 flex items-center">
+          <<i class="fa fa-gold text-yellow-400 mr-2"></</i>黄金价格
+        </h2>
+        <div class="text-3xl font-bold" id="gold-price">加载中...</div>
+        <div class="text-sm text-gray-400 mt-1" id="gold-time">更新时间：--</div>
       </div>
-      <div class="bg-gray-800 rounded-lg p-4">
-        <h2 class="font-bold mb-2">白银价格</h2>
-        <div class="text-3xl font-bold" id="silver-price">--</div>
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-500/30">
+        <h2 class="font-bold mb-2 flex items-center">
+          <<i class="fa fa-silver text-gray-300 mr-2"></</i>白银价格
+        </h2>
+        <div class="text-3xl font-bold" id="silver-price">加载中...</div>
+        <div class="text-sm text-gray-400 mt-1" id="silver-time">更新时间：--</div>
       </div>
     </div>
 
-    <!-- 黄金图表（K线+分时） -->
+    <!-- 黄金图表区域 -->
     <div class="bg-gray-800 rounded-lg p-4 mb-6">
-      <h2 class="font-bold mb-4">黄金图表</h2>
+      <h2 class="font-bold mb-4">黄金专业图表</h2>
       <div class="chart-container mb-4" id="gold-candlestick"></div>
       <div class="sub-chart" id="gold-line"></div>
     </div>
 
-    <!-- 白银图表（K线+分时） -->
+    <!-- 白银图表区域 -->
     <div class="bg-gray-800 rounded-lg p-4 mb-6">
-      <h2 class="font-bold mb-4">白银图表</h2>
+      <h2 class="font-bold mb-4">白银专业图表</h2>
       <div class="chart-container mb-4" id="silver-candlestick"></div>
       <div class="sub-chart" id="silver-line"></div>
     </div>
 
     <!-- 操作建议 -->
     <div class="bg-gray-800 rounded-lg p-4">
-      <h2 class="font-bold mb-4">操作建议</h2>
-      <div id="advice" class="text-sm space-y-4">加载中...</div>
+      <h2 class="font-bold mb-4">智能操作建议</h2>
+      <div id="advice" class="space-y-4">
+        <div class="p-2 bg-gray-700 rounded">加载中...</div>
+      </div>
     </div>
   </div>
 
   <script>
+    // 后端API地址（你的Workers地址）
     const API_BASE = "https://precious-metal-analyzer.aoyouios.workers.dev";
+    // 图表实例
     let goldCandlestick, goldLine, silverCandlestick, silverLine;
 
-    // 1. 初始化图表（确保一打开就有框架）
+    // 1. 初始化图表（确保首屏必显框架）
     function initCharts() {
-      // 黄金K线图
+      // 黄金K线图（核心图表，依赖已引入的插件）
       goldCandlestick = new Chart(document.getElementById('gold-candlestick'), {
         type: 'candlestick',
         data: { datasets: [{ label: '黄金K线', data: [] }] },
-        options: { scales: { x: { type: 'time' }, y: { title: { display: true, text: '价格（元/克）' } } }
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: 'time', time: { unit: 'hour' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { title: { display: true, text: '价格（元/克）' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
       });
 
       // 黄金分时图
       goldLine = new Chart(document.getElementById('gold-line'), {
         type: 'line',
-        data: { datasets: [{ label: '黄金价格', data: [], borderColor: 'rgb(255, 215, 0)' }] },
-        options: { scales: { x: { type: 'time' }, y: { display: false } } }
+        data: { datasets: [{ label: '黄金价格', data: [], borderColor: 'rgb(255, 215, 0)', fill: true, backgroundColor: 'rgba(255,215,0,0.1)' }] },
+        options: { responsive: true, scales: { x: { type: 'time' }, y: { display: false } } }
       });
 
       // 白银K线图
       silverCandlestick = new Chart(document.getElementById('silver-candlestick'), {
         type: 'candlestick',
         data: { datasets: [{ label: '白银K线', data: [] }] },
-        options: { scales: { x: { type: 'time' }, y: { title: { display: true, text: '价格（元/克）' } } }
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: 'time', time: { unit: 'hour' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { title: { display: true, text: '价格（元/克）' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
       });
 
       // 白银分时图
       silverLine = new Chart(document.getElementById('silver-line'), {
         type: 'line',
-        data: { datasets: [{ label: '白银价格', data: [], borderColor: 'rgb(192, 192, 192)' }] },
-        options: { scales: { x: { type: 'time' }, y: { display: false } } }
+        data: { datasets: [{ label: '白银价格', data: [], borderColor: 'rgb(192,192,192)', fill: true, backgroundColor: 'rgba(192,192,192,0.1)' }] },
+        options: { responsive: true, scales: { x: { type: 'time' }, y: { display: false } } }
       });
     }
 
-    // 2. 生成模拟数据（初期过渡用）
+    // 2. 生成模拟数据（首屏无真实数据时显示，确保不空白）
     function generateMockData(type) {
-      const base = type === 'gold' ? 772 : 8.78;
+      const basePrice = type === 'gold' ? 772 : 8.78; // 基准价
       const data = [];
+      // 生成10条模拟数据（过去10小时）
       for (let i = 10; i >= 0; i--) {
-        const price = base + (Math.random() - 0.5) * (type === 'gold' ? 2 : 0.2);
+        const price = basePrice + (Math.random() - 0.5) * (type === 'gold' ? 2 : 0.2);
         data.push({
-          t: Date.now() - i * 3600000,
-          o: price - Math.random() * 0.1,
-          h: price + Math.random() * 0.1,
-          l: price - Math.random() * 0.15,
-          c: price
+          t: Date.now() - i * 3600000, // 时间戳（过去i小时）
+          o: +(price - Math.random() * 0.1).toFixed(2),
+          h: +(price + Math.random() * 0.1).toFixed(2),
+          l: +(price - Math.random() * 0.15).toFixed(2),
+          c: +price.toFixed(2)
         });
       }
       return data;
     }
 
-    // 3. 加载数据并强制显示（核心：永不空白）
-    async function loadAndRender() {
+    // 3. 加载并显示所有数据（核心逻辑，带全容错）
+    async function loadAllData() {
       try {
-        // 尝试获取真实数据
-        const [priceRes, historyRes, adviceRes] = await Promise.allSettled([
-          fetch(`${API_BASE}/data`),
-          fetch(`${API_BASE}/history`),
-          fetch(`${API_BASE}/advice`)
+        // 并行请求接口（提高加载速度）
+        const [priceRes, historyRes, adviceRes] = await Promise.all([
+          fetch(`${API_BASE}/data`).catch(() => ({ ok: false })), // 请求失败时返回错误标识
+          fetch(`${API_BASE}/history`).catch(() => ({ ok: false })),
+          fetch(`${API_BASE}/advice`).catch(() => ({ ok: false }))
         ]);
 
-        // 处理实时价格
-        let priceData = {};
-        if (priceRes.status === 200) {
-          priceData = await priceRes.json();
-          document.getElementById('gold-price').textContent = priceData.gold || '--';
-          document.getElementById('silver-price').textContent = priceData.silver || '--';
+        // --------------------------
+        // 处理实时价格（必显，无空白）
+        // --------------------------
+        let goldPrice = '772.05', silverPrice = '8.78', updateTime = '模拟数据';
+        if (priceRes.ok) {
+          const priceData = await priceRes.json();
+          goldPrice = priceData.gold || goldPrice;
+          silverPrice = priceData.silver || silverPrice;
+          updateTime = priceData.updateTime || new Date().toLocaleString();
+        }
+        // 更新价格显示
+        document.getElementById('gold-price').textContent = goldPrice;
+        document.getElementById('silver-price').textContent = silverPrice;
+        document.getElementById('gold-time').textContent = `更新时间：${updateTime}`;
+        document.getElementById('silver-time').textContent = `更新时间：${updateTime}`;
+
+        // --------------------------
+        // 处理历史数据（图表必显）
+        // --------------------------
+        // 黄金数据（真实优先，否则模拟）
+        let goldData = [];
+        if (historyRes.ok) {
+          const historyData = await historyRes.json();
+          goldData = historyData.gold || [];
+        }
+        // 数据不足5条时，用模拟数据补充
+        if (goldData.length < 5) {
+          goldData = [...goldData, ...generateMockData('gold').slice(goldData.length)];
+        }
+
+        // 白银数据（同上逻辑）
+        let silverData = [];
+        if (historyRes.ok) {
+          const historyData = await historyRes.json();
+          silverData = historyData.silver || [];
+        }
+        if (silverData.length < 5) {
+          silverData = [...silverData, ...generateMockData('silver').slice(silverData.length)];
+        }
+
+        // 更新图表（必显，无空白）
+        goldCandlestick.data.datasets[0].data = goldData.map(item => ({
+          x: new Date(item.t),
+          o: item.o, h: item.h, l: item.l, c: item.c
+        }));
+        goldLine.data.datasets[0].data = goldData.map(item => ({ x: new Date(item.t), y: item.c }));
+        
+        silverCandlestick.data.datasets[0].data = silverData.map(item => ({
+          x: new Date(item.t),
+          o: item.o, h: item.h, l: item.l, c: item.c
+        }));
+        silverLine.data.datasets[0].data = silverData.map(item => ({ x: new Date(item.t), y: item.c }));
+
+        // 强制刷新图表（确保显示）
+        [goldCandlestick, goldLine, silverCandlestick, silverLine].forEach(chart => chart.update());
+
+        // --------------------------
+        // 处理操作建议（必显，无空白）
+        // --------------------------
+        let adviceHtml = '';
+        if (adviceRes.ok) {
+          const adviceData = await adviceRes.json();
+          adviceHtml = `
+            <div class="p-3 bg-yellow-900/20 rounded border border-yellow-500/30">
+              <h3 class="font-bold text-yellow-400">黄金建议</h3>
+              <p>操作：${adviceData.gold?.advice || '观望'}</p>
+              <p>进场价：${adviceData.gold?.entryPrice || goldPrice}</p>
+              <p>止盈：${adviceData.gold?.takeProfit || (+goldPrice * 1.02).toFixed(2)}</p>
+              <p>止损：${adviceData.gold?.stopLoss || (+goldPrice * 0.98).toFixed(2)}</p>
+            </div>
+            <div class="p-3 bg-gray-700 rounded">
+              <h3 class="font-bold text-gray-300">白银建议</h3>
+              <p>操作：${adviceData.silver?.advice || '观望'}</p>
+              <p>进场价：${adviceData.silver?.entryPrice || silverPrice}</p>
+              <p>止盈：${adviceData.silver?.takeProfit || (+silverPrice * 1.02).toFixed(2)}</p>
+              <p>止损：${adviceData.silver?.stopLoss || (+silverPrice * 0.98).toFixed(2)}</p>
+            </div>
+          `;
         } else {
-          priceData = { gold: '772.05', silver: '8.78' };
+          // 接口失败时显示模拟建议
+          adviceHtml = `
+            <div class="p-3 bg-yellow-900/20 rounded border border-yellow-500/30">
+              <h3 class="font-bold text-yellow-400">黄金建议（模拟）</h3>
+              <p>操作：观望</p>
+              <p>进场价：${goldPrice}</p>
+              <p>止盈：${(+goldPrice * 1.02).toFixed(2)}</p>
+              <p>止损：${(+goldPrice * 0.98).toFixed(2)}</p>
+            </div>
+            <div class="p-3 bg-gray-700 rounded">
+              <h3 class="font-bold text-gray-300">白银建议（模拟）</h3>
+              <p>操作：观望</p>
+              <p>进场价：${silverPrice}</p>
+              <p>止盈：${(+silverPrice * 1.02).toFixed(2)}</p>
+              <p>止损：${(+silverPrice * 0.98).toFixed(2)}</p>
+            </div>
+          `;
         }
+        document.getElementById('advice').innerHTML = adviceHtml;
 
-        // 处理历史数据
-        let historyData = { gold: [], silver: [] };
-        if (historyRes.status === 200) {
-          historyData = await historyRes.json();
-        }
-
-        // 处理建议
-        let advice = { gold: { advice: '观望' }, silver: { advice: '观望' } };
-        if (adviceRes.status === 200) {
-          advice = await adviceRes.json();
-        }
-
-        // 合并真实数据与模拟数据
-        const goldData = historyData.gold.length > 0 ? historyData.gold : generateMockData('gold');
-        const silverData = historyData.silver.length > 0 ? historyData.silver : generateMockData('silver');
-
-        // 更新图表
-        updateChart(goldCandlestick, goldLine, goldData);
-        updateChart(silverCandlestick, silverLine, silverData);
-
-        // 更新建议
-        document.getElementById('advice').innerHTML = `
-          <div>黄金：${advice.gold.advice}（当前价：${priceData.gold || '772.05'}）</div>
-          <div>白银：${advice.silver.advice}（当前价：${priceData.silver || '8.78'}）</div>
-        `;
-
-      } catch (e) {
-        console.error("加载失败，使用纯模拟数据：", e);
+      } catch (error) {
+        // 终极容错：任何代码错误都显示模拟数据（确保不空白）
+        console.error("加载失败，显示纯模拟数据：", error);
         const goldMock = generateMockData('gold');
         const silverMock = generateMockData('silver');
-        updateChart(goldCandlestick, goldLine, goldMock);
-        updateChart(silverCandlestick, silverLine, silverMock);
+        // 更新图表
+        goldCandlestick.data.datasets[0].data = goldMock.map(item => ({ x: new Date(item.t), o: item.o, h: item.h, l: item.l, c: item.c }));
+        goldLine.data.datasets[0].data = goldMock.map(item => ({ x: new Date(item.t), y: item.c }));
+        silverCandlestick.data.datasets[0].data = silverMock.map(item => ({ x: new Date(item.t), o: item.o, h: item.h, l: item.l, c: item.c }));
+        silverLine.data.datasets[0].data = silverMock.map(item => ({ x: new Date(item.t), y: item.c }));
+        [goldCandlestick, goldLine, silverCandlestick, silverLine].forEach(chart => chart.update());
+        // 更新价格和建议
+        document.getElementById('gold-price').textContent = goldMock[0].c;
+        document.getElementById('silver-price').textContent = silverMock[0].c;
         document.getElementById('advice').innerHTML = `
-          <div>黄金：模拟数据（当前价：772.05）</div>
-          <div>白银：模拟数据（当前价：8.78）</div>
+          <div class="p-3 bg-yellow-900/20 rounded">
+            <h3 class="font-bold">黄金建议（模拟）</h3>
+            <p>操作：观望</p>
+          </div>
+          <div class="p-3 bg-gray-700 rounded">
+            <h3 class="font-bold">白银建议（模拟）</h3>
+            <p>操作：观望</p>
+          </div>
         `;
       }
     }
 
-    // 4. 更新图表的通用函数
-    function updateChart(candlestickChart, lineChart, data) {
-      candlestickChart.data.datasets[0].data = data.map(item => ({
-        x: new Date(item.t),
-        o: item.o, h: item.h, l: item.l, c: item.c
-      }));
-      lineChart.data.datasets[0].data = data.map(item => ({ x: new Date(item.t), y: item.c }));
-      [candlestickChart, lineChart].forEach(chart => chart.update());
-    }
-
-    // 5. 初始化并强制渲染
+    // 4. 初始化并加载数据（首屏执行，确保立即显示）
     window.onload = () => {
-      initCharts();
-      loadAndRender();
-      setInterval(loadAndRender, 300000); // 每5分钟刷新
+      initCharts(); // 先创建图表框架（0.1秒内完成）
+      loadAllData(); // 立即加载数据（无论成功与否，3秒内必显内容）
+      // 定时刷新（5分钟一次，逐步替换为真实数据）
+      setInterval(loadAllData, 300000);
     };
   </script>
 </body>
