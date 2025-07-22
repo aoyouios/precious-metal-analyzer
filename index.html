@@ -3,274 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聚宝盆风控技术研究室自研系统</title>
+    <title>贵金属分析系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#165DFF',
-                        secondary: '#0FC6C2',
-                        success: '#00B42A',
-                        warning: '#FF7D00',
-                        danger: '#F53F3F',
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .chart-container { height: 300px; width: 100%; }
-            .card-shadow { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        }
-    </style>
 </head>
-<body class="bg-gray-50">
-    <nav class="bg-primary text-white py-4">
-        <div class="container mx-auto px-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center">
-                <i class="fa fa-line-chart mr-2"></i>聚宝盆贵金属分析系统
-            </h1>
-            <div class="hidden md:flex space-x-6">
-                <a href="#chart" class="hover:text-gray-200">价格图表</a>
-                <a href="#advice" class="hover:text-gray-200">操作建议</a>
-                <a href="#history" class="hover:text-gray-200">预测对比</a>
-            </div>
+<body class="p-4 max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">贵金属分析系统</h1>
+
+    <!-- 价格区域 -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+        <h2 class="font-bold mb-2">当前价格</h2>
+        <div id="price-display" class="text-gray-700">加载中...</div>
+    </div>
+
+    <!-- 建议区域 -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+        <h2 class="font-bold mb-2">操作建议</h2>
+        <div id="advice-display" class="text-gray-700">加载中...</div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+        <h2 class="font-bold mb-2">价格走势</h2>
+        <div class="h-64">
+            <canvas id="price-chart"></canvas>
         </div>
-    </nav>
-
-    <main class="container mx-auto px-4 py-6">
-        <div class="text-center text-gray-500 mb-6" id="update-time">数据加载中...</div>
-
-        <!-- 价格图表 -->
-        <section id="chart" class="mb-8">
-            <div class="bg-white rounded-lg p-4 card-shadow">
-                <h2 class="text-lg font-bold mb-4">价格走势图（近7天）</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="text-sm text-gray-600 mb-2">黄金价格（元/克）</h3>
-                        <div class="chart-container">
-                            <canvas id="gold-chart"></canvas>
-                        </div>
-                        <div class="mt-2 text-right font-bold text-primary" id="gold-price">--</div>
-                    </div>
-                    <div>
-                        <h3 class="text-sm text-gray-600 mb-2">白银价格（元/克）</h3>
-                        <div class="chart-container">
-                            <canvas id="silver-chart"></canvas>
-                        </div>
-                        <div class="mt-2 text-right font-bold text-secondary" id="silver-price">--</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 操作建议 -->
-        <section id="advice" class="mb-8">
-            <div class="bg-white rounded-lg p-4 card-shadow">
-                <h2 class="text-lg font-bold mb-4">智能操作建议</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="border border-primary/20 p-3 rounded">
-                        <h3 class="font-bold text-primary mb-2">黄金操作建议</h3>
-                        <div class="space-y-2 text-sm">
-                            <p><span class="text-gray-600">当前策略：</span><span id="gold-strategy" class="font-bold">--</span></p>
-                            <p><span class="text-gray-600">进场价格：</span><span id="gold-entry">--</span> 元/克</p>
-                            <p><span class="text-gray-600">止盈点位：</span><span id="gold-take-profit" class="text-success">--</span> 元/克</p>
-                            <p><span class="text-gray-600">止损点位：</span><span id="gold-stop-loss" class="text-danger">--</span> 元/克</p>
-                            <p><span class="text-gray-600">分析依据：</span><span id="gold-reason">--</span></p>
-                        </div>
-                    </div>
-                    <div class="border border-secondary/20 p-3 rounded">
-                        <h3 class="font-bold text-secondary mb-2">白银操作建议</h3>
-                        <div class="space-y-2 text-sm">
-                            <p><span class="text-gray-600">当前策略：</span><span id="silver-strategy" class="font-bold">--</span></p>
-                            <p><span class="text-gray-600">进场价格：</span><span id="silver-entry">--</span> 元/克</p>
-                            <p><span class="text-gray-600">止盈点位：</span><span id="silver-take-profit" class="text-success">--</span> 元/克</p>
-                            <p><span class="text-gray-600">止损点位：</span><span id="silver-stop-loss" class="text-danger">--</span> 元/克</p>
-                            <p><span class="text-gray-600">分析依据：</span><span id="silver-reason">--</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 预测对比 -->
-        <section id="history" class="mb-8">
-            <div class="bg-white rounded-lg p-4 card-shadow">
-                <h2 class="text-lg font-bold mb-4">24小时预测对比</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="px-3 py-2 text-left">时间</th>
-                                <th class="px-3 py-2 text-left">黄金预测</th>
-                                <th class="px-3 py-2 text-left">黄金结果</th>
-                                <th class="px-3 py-2 text-left">白银预测</th>
-                                <th class="px-3 py-2 text-left">白银结果</th>
-                            </tr>
-                        </thead>
-                        <tbody id="prediction-table">
-                            <tr>
-                                <td colspan="5" class="px-3 py-4 text-center text-gray-500">加载中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
+    </div>
 
     <script>
-        // 配置
-        const API = "https://precious-metal-analyzer.aoyouios.workers.dev";
-        let goldChart, silverChart;
+        // 配置接口地址
+        const API_BASE = "https://precious-metal-analyzer.aoyouios.workers.dev";
+        let priceChart;
 
         // 初始化图表
-        function initCharts() {
-            // 黄金图表
-            goldChart = new Chart(document.getElementById('gold-chart'), {
+        function initChart() {
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            priceChart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: [], datasets: [{ data: [], borderColor: '#165DFF', tension: 0.3, fill: false }] },
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '黄金价格',
+                        data: [],
+                        borderColor: '#FFD700',
+                        tension: 0.3
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { x: { display: false }, y: { ticks: { callback: v => v } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // 白银图表
-            silverChart = new Chart(document.getElementById('silver-chart'), {
-                type: 'line',
-                data: { labels: [], datasets: [{ data: [], borderColor: '#0FC6C2', tension: 0.3, fill: false }] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { x: { display: false }, y: { ticks: { callback: v => v } } },
-                    plugins: { legend: { display: false } }
+                    scales: { y: { title: { display: true, text: '价格（元/克）' } } }
                 }
             });
         }
 
-        // 更新价格和时间
-        function updatePrice(data) {
-            document.getElementById('gold-price').textContent = data.gold || '--';
-            document.getElementById('silver-price').textContent = data.silver || '--';
-            document.getElementById('update-time').textContent = `最后更新：${data.updateTime || new Date().toLocaleString()}`;
-        }
-
-        // 更新走势图
-        function updateChart(history) {
-            // 处理黄金数据
-            if (history.gold && history.gold.length) {
-                goldChart.data.labels = history.gold.map(item => {
-                    const d = new Date(item.time);
-                    return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
-                });
-                goldChart.data.datasets[0].data = history.gold.map(item => parseFloat(item.price));
-                goldChart.update();
-            } else {
-                goldChart.data.labels = ['暂无数据'];
-                goldChart.data.datasets[0].data = [0];
-                goldChart.update();
-            }
-
-            // 处理白银数据
-            if (history.silver && history.silver.length) {
-                silverChart.data.labels = history.silver.map(item => {
-                    const d = new Date(item.time);
-                    return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
-                });
-                silverChart.data.datasets[0].data = history.silver.map(item => parseFloat(item.price));
-                silverChart.update();
-            } else {
-                silverChart.data.labels = ['暂无数据'];
-                silverChart.data.datasets[0].data = [0];
-                silverChart.update();
-            }
-        }
-
-        // 更新操作建议
-        function updateAdvice(advice) {
-            // 黄金建议默认值
-            const gold = advice.gold || { advice: '持有', reason: '数据加载中' };
-            document.getElementById('gold-strategy').textContent = gold.advice;
-            document.getElementById('gold-entry').textContent = gold.entryPrice || '--';
-            document.getElementById('gold-take-profit').textContent = gold.takeProfit || '--';
-            document.getElementById('gold-stop-loss').textContent = gold.stopLoss || '--';
-            document.getElementById('gold-reason').textContent = gold.reason;
-
-            // 白银建议默认值
-            const silver = advice.silver || { advice: '持有', reason: '数据加载中' };
-            document.getElementById('silver-strategy').textContent = silver.advice;
-            document.getElementById('silver-entry').textContent = silver.entryPrice || '--';
-            document.getElementById('silver-take-profit').textContent = silver.takeProfit || '--';
-            document.getElementById('silver-stop-loss').textContent = silver.stopLoss || '--';
-            document.getElementById('silver-reason').textContent = silver.reason;
-        }
-
-        // 更新对比表格
-        function updateTable(history) {
-            const table = document.getElementById('prediction-table');
-            if (!history || !history.length) {
-                table.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">暂无数据</td></tr>';
-                return;
-            }
-
-            table.innerHTML = history.slice(-6).map(item => {
-                const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                return `
-                    <tr class="border-t">
-                        <td class="px-3 py-2">${time}</td>
-                        <td class="px-3 py-2">${item.gold.advice || '--'}</td>
-                        <td class="px-3 py-2 ${item.goldResult?.includes('✓') ? 'text-success' : item.goldResult?.includes('✗') ? 'text-dangeroldResult?.includes('✗') ? 'text-danger' : ''}">${item.goldResult || '--'}</td>
-                        <td class="px-3 py-2">${item.silver.advice || '--'}</td>
-                        <td class="px-3 py-2 ${item.silverResult?.includes('✓') ? 'text-success' : item.silverResult?.includes('✗') ? 'text-danger' : ''}">${item.silverResult || '--'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // 加载所有数据
-        async function loadAll() {
+        // 加载价格并更新显示
+        async function loadPrice() {
             try {
-                // 1. 加载价格
-                const priceRes = await fetch(`${API}/data`);
-                const priceData = await priceRes.json();
-                updatePrice(priceData);
-
-                // 2. 加载历史（图表）
-                const historyRes = await fetch(`${API}/history`);
-                const historyData = await historyRes.json();
-                updateChart(historyData);
-
-                // 3. 加载建议
-                const adviceRes = await fetch(`${API}/advice`);
-                const adviceData = await adviceRes.json();
-                updateAdvice(adviceData);
-
-                // 4. 加载对比数据
-                const tableRes = await fetch(`${API}/advice-history`);
-                const tableData = await tableRes.json();
-                updateTable(tableData);
-
+                const res = await fetch(`${API_BASE}/data`);
+                const data = await res.json();
+                document.getElementById('price-display').innerHTML = `
+                    黄金：${data.gold} 元/克<br>
+                    白银：${data.silver} 元/克<br>
+                    更新时间：${data.updateTime}
+                `;
+                return data; // 返回价格供其他函数使用
             } catch (e) {
-                console.error('加载错误:', e);
-                document.getElementById('update-time').textContent = '部分数据加载失败，刷新重试';
+                document.getElementById('price-display').innerHTML = "价格加载失败（使用默认值）<br>黄金：772.05 元/克<br>白银：8.78 元/克";
+                return { gold: "772.05", silver: "8.78" };
             }
         }
 
-        // 页面加载后执行
-        window.onload = () => {
-            initCharts();
-            loadAll();
-            // 每5分钟刷新一次
-            setInterval(loadAll, 300000);
-        };
+        // 加载建议并更新显示
+        async function loadAdvice() {
+            try {
+                const res = await fetch(`${API_BASE}/advice`);
+                const advice = await res.json();
+                document.getElementById('advice-display').innerHTML = `
+                    黄金策略：${advice.gold?.advice || '持有'}<br>
+                    进场价：${advice.gold?.entryPrice || '--'} 元/克<br>
+                    止盈：${advice.gold?.takeProfit || '--'} 元/克<br>
+                    止损：${advice.gold?.stopLoss || '--'} 元/克<br>
+                    <br>
+                    白银策略：${advice.silver?.advice || '持有'}<br>
+                    进场价：${advice.silver?.entryPrice || '--'} 元/克<br>
+                    止盈：${advice.silver?.takeProfit || '--'} 元/克<br>
+                    止损：${advice.silver?.stopLoss || '--'} 元/克
+                `;
+            } catch (e) {
+                document.getElementById('advice-display').innerHTML = "建议加载失败<br>黄金：持有，白银：持有";
+            }
+        }
+
+        // 加载历史数据并更新图表
+        async function loadHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/history`);
+                const history = await res.json();
+                // 提取最近10条黄金数据
+                const goldData = history.gold.slice(-10);
+                if (goldData.length > 0) {
+                    priceChart.data.labels = goldData.map(item => {
+                        const d = new Date(item.time);
+                        return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
+                    });
+                    priceChart.data.datasets[0].data = goldData.map(item => parseFloat(item.price));
+                    priceChart.update();
+                } else {
+                    priceChart.data.labels = ['暂无数据'];
+                    priceChart.data.datasets[0].data = [0];
+                    priceChart.update();
+                }
+            } catch (e) {
+                console.log("历史数据加载失败:", e);
+                priceChart.data.labels = ['数据加载失败'];
+                priceChart.data.datasets[0].data = [0];
+                priceChart.update();
+            }
+        }
+
+        // 页面加载完成后执行
+        async function init() {
+            initChart(); // 先初始化图表
+            await loadPrice(); // 加载价格
+            await loadAdvice(); // 加载建议
+            await loadHistory(); // 加载历史数据（图表）
+        }
+
+        // 启动初始化
+        window.onload = init;
     </script>
 </body>
 </html>
