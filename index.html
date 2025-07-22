@@ -1,186 +1,246 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Tailwind CSS（苹果风格基础） -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css"
-    rel="stylesheet"
-  />
-  <!-- Chart.js（图表渲染） -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-  <!-- 图标库 -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
-    rel="stylesheet"
-  />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>聚宝盆贵金属预测技术工作室自研系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- 苹果风格配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            success: '#34C759',
+            danger: '#FF3B30',
+            neutral: '#8A8F98',
+            apple: {
+              bg: '#F5F5F7',
+              card: '#FFFFFF',
+              text: '#1D1D1F',
+              border: '#E2E2E2'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .shadow-apple {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .shadow-apple-hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+      .transition-apple {
+        transition: all 0.2s ease;
+      }
+    }
+  </style>
+  
   <style>
-    /* 苹果官网风格基础 */
+    /* 基础样式 */
     body {
-      background-color: #f5f5f7 !important;
-      color: #1d1d1f !important;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
-      line-height: 1.6;
+      background-color: #F5F5F7 !important;
+      color: #1D1D1F !important;
     }
-    /* 标题强调（苹果风格字体） */
-    h1, h2, h3 {
-      font-weight: 600;
-      letter-spacing: -0.02em;
+    
+    /* 图表容器 */
+    .chart-container {
+      height: 320px;
+      width: 100%;
     }
-    /* 卡片阴影（苹果细腻风格） */
-    .apple-card {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-      transition: box-shadow 0.2s ease;
+    
+    .mini-chart-container {
+      height: 240px;
+      width: 100%;
     }
-    .apple-card:hover {
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
-    }
-    /* 图表容器（强制高度） */
-    .chart-canvas {
-      width: 100% !important;
-      height: 360px !important;
-    }
-    /* 分时图平滑曲线 */
+    
+    /* 平滑曲线效果 */
     .smooth-line {
       tension: 0.4 !important;
     }
-    /* K线图样式优化 */
-    .candlestick-up {
-      background-color: #34c759 !important;
-      border-color: #34c759 !important;
-    }
-    .candlestick-down {
-      background-color: #ff3b30 !important;
-      border-color: #ff3b30 !important;
+    
+    /* 确保Canvas正确显示 */
+    canvas {
+      display: block;
     }
   </style>
 </head>
-<body class="min-h-screen">
 
-  <!-- 顶部导航（苹果官网简洁版） -->
-  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
-      <i class="fa fa-diamond text-blue-600 text-xl mr-2"></i>
-      <h1 class="text-xl font-semibold tracking-tight">
-        聚宝盆贵金属预测技术工作室自研系统
-      </h1>
-      <span id="system-time" class="ml-auto text-sm text-gray-500">加载中...</span>
+<body class="min-h-screen">
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 bg-apple-card/90 backdrop-blur-md border-b border-apple-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <i class="fa fa-diamond text-primary text-2xl mr-2"></i>
+          <h1 class="text-xl font-semibold tracking-tight">聚宝盆贵金属预测技术工作室自研系统</h1>
+        </div>
+        <div class="text-sm text-neutral">
+          <span id="system-time">加载中...</span>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- 主内容（苹果风网格布局） -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-    <!-- 价格卡片（双列，苹果简洁风格） -->
+    <!-- 价格卡片区域 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <div class="bg-white rounded-xl apple-card p-6 flex flex-col justify-between">
-        <div>
-          <h2 class="text-lg font-medium text-gray-500">黄金价格</h2>
+      <!-- 黄金价格卡片 -->
+      <div class="bg-apple-card rounded-xl shadow-apple hover:shadow-apple-hover transition-apple p-6">
+        <div class="mb-4">
+          <h2 class="text-lg font-medium text-neutral">黄金价格</h2>
           <div class="flex items-baseline mt-2">
-            <span id="gold-price" class="text-3xl font-bold">772.05</span>
-            <span class="ml-2 text-sm text-gray-500">元/克</span>
+            <span id="gold-price" class="text-4xl font-semibold">772.05</span>
+            <span class="ml-2 text-sm text-neutral">元/克</span>
           </div>
         </div>
-        <div class="flex justify-between items-center mt-4">
-          <div class="text-sm text-gray-500">
-            更新时间：<span id="gold-time">2025/7/22 03:34:21</span>
+        <div class="flex justify-between items-center pt-4 border-t border-apple-border">
+          <div class="text-sm text-neutral">
+            <span>更新时间：</span>
+            <span id="gold-time">2025/7/22 03:34:21</span>
           </div>
-          <button
-            id="refresh-gold"
-            class="text-blue-600 hover:text-blue-500 transition"
-          >
-            <i class="fa fa-refresh mr-1"></i> 刷新
+          <button id="refresh-gold" class="text-primary hover:text-primary/80 text-sm font-medium transition-apple">
+            <i class="fa fa-refresh mr-1"></i>刷新
           </button>
         </div>
       </div>
 
-      <div class="bg-white rounded-xl apple-card p-6 flex flex-col justify-between">
-        <div>
-          <h2 class="text-lg font-medium text-gray-500">白银价格</h2>
+      <!-- 白银价格卡片 -->
+      <div class="bg-apple-card rounded-xl shadow-apple hover:shadow-apple-hover transition-apple p-6">
+        <div class="mb-4">
+          <h2 class="text-lg font-medium text-neutral">白银价格</h2>
           <div class="flex items-baseline mt-2">
-            <span id="silver-price" class="text-3xl font-bold">8.78</span>
-            <span class="ml-2 text-sm text-gray-500">元/克</span>
+            <span id="silver-price" class="text-4xl font-semibold">8.78</span>
+            <span class="ml-2 text-sm text-neutral">元/克</span>
           </div>
         </div>
-        <div class="flex justify-between items-center mt-4">
-          <div class="text-sm text-gray-500">
-            更新时间：<span id="silver-time">2025/7/22 03:34:21</span>
+        <div class="flex justify-between items-center pt-4 border-t border-apple-border">
+          <div class="text-sm text-neutral">
+            <span>更新时间：</span>
+            <span id="silver-time">2025/7/22 03:34:21</span>
           </div>
-          <button
-            id="refresh-silver"
-            class="text-blue-600 hover:text-blue-500 transition"
-          >
-            <i class="fa fa-refresh mr-1"></i> 刷新
+          <button id="refresh-silver" class="text-primary hover:text-primary/80 text-sm font-medium transition-apple">
+            <i class="fa fa-refresh mr-1"></i>刷新
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 黄金图表区（分时图在上 + K线图在下） -->
-    <div class="bg-white rounded-xl apple-card p-6 mb-8">
-      <h2 class="text-xl font-semibold mb-4">黄金价格图表</h2>
-      <!-- 分时图（平滑曲线） -->
-      <canvas id="gold-line" class="chart-canvas smooth-line"></canvas>
-      <!-- K线图（清晰易读） -->
-      <canvas id="gold-candlestick" class="chart-canvas mt-6"></canvas>
+    <!-- 黄金图表区域（分时图在上，K线图在下） -->
+    <div class="bg-apple-card rounded-xl shadow-apple p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-6">黄金价格图表</h2>
+      
+      <!-- 分时图（上） -->
+      <div class="mini-chart-container mb-6">
+        <canvas id="gold-line"></canvas>
+      </div>
+      
+      <!-- K线图（下） -->
+      <div class="chart-container">
+        <canvas id="gold-candlestick"></canvas>
+      </div>
     </div>
 
-    <!-- 白银图表区（同上结构） -->
-    <div class="bg-white rounded-xl apple-card p-6 mb-8">
-      <h2 class="text-xl font-semibold mb-4">白银价格图表</h2>
-      <canvas id="silver-line" class="chart-canvas smooth-line"></canvas>
-      <canvas id="silver-candlestick" class="chart-canvas mt-6"></canvas>
+    <!-- 白银图表区域 -->
+    <div class="bg-apple-card rounded-xl shadow-apple p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-6">白银价格图表</h2>
+      
+      <!-- 分时图（上） -->
+      <div class="mini-chart-container mb-6">
+        <canvas id="silver-line"></canvas>
+      </div>
+      
+      <!-- K线图（下） -->
+      <div class="chart-container">
+        <canvas id="silver-candlestick"></canvas>
+      </div>
     </div>
 
-    <!-- 操作建议（双列，苹果卡片风格） -->
-    <div class="bg-white rounded-xl apple-card p-6 mb-8">
-      <h2 class="text-xl font-semibold mb-4">智能操作建议</h2>
+    <!-- 操作建议 -->
+    <div class="bg-apple-card rounded-xl shadow-apple p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-6">智能操作建议</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="p-4 border rounded-md">
-          <h3 class="font-medium mb-2">黄金操作建议</h3>
-          <div id="gold-advice" class="text-sm text-gray-700">
-            <p>当前建议：<span class="font-bold">观望</span></p>
-            <p>当前价格：<span class="font-bold">772.05 元/克</span></p>
-            <p>止盈价：<span class="font-bold text-green-600">787.49 元/克</span></p>
-            <p>止损价：<span class="font-bold text-red-600">756.61 元/克</span></p>
+        <div class="p-5 rounded-xl bg-apple-bg border border-apple-border">
+          <h3 class="font-medium mb-4">黄金操作建议</h3>
+          <div id="gold-advice" class="space-y-3">
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">当前建议</span>
+              <span class="font-medium">观望</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">当前价格</span>
+              <span class="font-medium">772.05 元/克</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">止盈价</span>
+              <span class="font-medium text-success">787.49 元/克</span>
+            </div>
+            <div class="flex justify-between py-2">
+              <span class="text-neutral">止损价</span>
+              <span class="font-medium text-danger">756.61 元/克</span>
+            </div>
           </div>
         </div>
-        <div class="p-4 border rounded-md">
-          <h3 class="font-medium mb-2">白银操作建议</h3>
-          <div id="silver-advice" class="text-sm text-gray-700">
-            <p>当前建议：<span class="font-bold">观望</span></p>
-            <p>当前价格：<span class="font-bold">8.78 元/克</span></p>
-            <p>止盈价：<span class="font-bold text-green-600">8.95 元/克</span></p>
-            <p>止损价：<span class="font-bold text-red-600">8.60 元/克</span></p>
+        
+        <div class="p-5 rounded-xl bg-apple-bg border border-apple-border">
+          <h3 class="font-medium mb-4">白银操作建议</h3>
+          <div id="silver-advice" class="space-y-3">
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">当前建议</span>
+              <span class="font-medium">观望</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">当前价格</span>
+              <span class="font-medium">8.78 元/克</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-apple-border">
+              <span class="text-neutral">止盈价</span>
+              <span class="font-medium text-success">8.95 元/克</span>
+            </div>
+            <div class="flex justify-between py-2">
+              <span class="text-neutral">止损价</span>
+              <span class="font-medium text-danger">8.60 元/克</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 历史建议对比（表格+苹果风滚动） -->
-    <div class="bg-white rounded-xl apple-card p-6">
-      <h2 class="text-xl font-semibold mb-4">历史建议对比</h2>
+    <!-- 历史建议对比 -->
+    <div class="bg-apple-card rounded-xl shadow-apple p-6">
+      <h2 class="text-xl font-semibold mb-6">历史建议对比</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="bg-gray-50">
+          <thead class="bg-apple-bg">
             <tr>
-              <th class="px-4 py-2 text-left">时间</th>
-              <th class="px-4 py-2 text-left">黄金建议</th>
-              <th class="px-4 py-2 text-left">黄金结果</th>
-              <th class="px-4 py-2 text-left">白银建议</th>
-              <th class="px-4 py-2 text-left">白银结果</th>
+              <th class="px-4 py-3 text-left font-medium text-neutral">时间</th>
+              <th class="px-4 py-3 text-left font-medium text-neutral">黄金建议</th>
+              <th class="px-4 py-3 text-left font-medium text-neutral">黄金结果</th>
+              <th class="px-4 py-3 text-left font-medium text-neutral">白银建议</th>
+              <th class="px-4 py-3 text-left font-medium text-neutral">白银结果</th>
             </tr>
           </thead>
           <tbody id="history-table-body">
-            <tr class="border-b">
-              <td class="px-4 py-2">2025/7/22 11:55:59</td>
-              <td class="px-4 py-2">买入</td>
-              <td class="px-4 py-2">未完成 ⏳</td>
-              <td class="px-4 py-2">买入</td>
-              <td class="px-4 py-2">未完成 ⏳</td>
+            <tr class="border-b border-apple-border">
+              <td class="px-4 py-3">2025/7/22 11:55:59</td>
+              <td class="px-4 py-3">买入</td>
+              <td class="px-4 py-3">未完成 ⏳</td>
+              <td class="px-4 py-3">买入</td>
+              <td class="px-4 py-3">未完成 ⏳</td>
             </tr>
           </tbody>
         </table>
@@ -188,119 +248,192 @@
     </div>
   </main>
 
-  <!-- 图表初始化JS（核心逻辑） -->
   <script>
-    // 时间格式化（兼容所有场景）
+    // 全局变量
+    let goldLineChart, goldCandlestickChart;
+    let silverLineChart, silverCandlestickChart;
+    const API_URL = "https://precious-metal-analyzer.aoyouios.workers.dev/data";
+    
+    // 1. 时间格式化（修复Invalid Date问题）
     function formatTime(timestamp) {
-      if (!timestamp || isNaN(timestamp)) return "未知时间";
-      return new Date(timestamp).toLocaleString("zh-CN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
+      if (!timestamp || isNaN(timestamp) || timestamp < 100000000000) {
+        return "未知时间";
+      }
+      return new Date(timestamp).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).replace(',', ' ');
     }
 
-    // 模拟后端数据（实际对接 /data 接口）
-    async function fetchRealData() {
+    // 2. 更新系统时间
+    function updateSystemTime() {
+      const now = new Date();
+      document.getElementById('system-time').textContent = now.toLocaleString('zh-CN');
+    }
+    setInterval(updateSystemTime, 1000);
+    updateSystemTime();
+
+    // 3. 获取并更新价格数据
+    async function fetchAndUpdatePrices() {
       try {
-        const res = await fetch(
-          "https://precious-metal-analyzer.aoyouios.workers.dev/data"
-        );
-        return await res.json();
-      } catch (err) {
-        console.error("数据获取失败：", err);
-        // 返回默认值避免崩溃
-        return {
-          gold: "772.05",
-          silver: "8.78",
-          updateTime: Date.now(),
-        };
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        
+        // 更新黄金价格
+        const goldPriceEl = document.getElementById('gold-price');
+        const goldTimeEl = document.getElementById('gold-time');
+        
+        if (data.gold) {
+          goldPriceEl.textContent = parseFloat(data.gold).toFixed(2);
+        }
+        
+        if (data.updateTime) {
+          goldTimeEl.textContent = formatTime(data.updateTime);
+          document.getElementById('silver-time').textContent = formatTime(data.updateTime);
+        }
+        
+        // 更新白银价格
+        const silverPriceEl = document.getElementById('silver-price');
+        if (data.silver) {
+          silverPriceEl.textContent = parseFloat(data.silver).toFixed(2);
+        }
+        
+        // 更新图表数据
+        updateChartsWithNewPrice('gold', parseFloat(data.gold || 772.05));
+        updateChartsWithNewPrice('silver', parseFloat(data.silver || 8.78));
+        
+      } catch (error) {
+        console.error('获取价格失败:', error);
+        // 失败时不修改现有价格，保持最后显示的值
       }
     }
 
-    // 初始化黄金分时图
-    function renderGoldLineChart() {
-      const ctx = document.getElementById("gold-line").getContext("2d");
-      return new Chart(ctx, {
-        type: "line",
+    // 4. 生成默认图表数据
+    function generateDefaultChartData(type, count = 24) {
+      const basePrice = type === 'gold' ? 772.05 : 8.78;
+      const data = [];
+      let lastPrice = basePrice;
+      
+      for (let i = count; i >= 0; i--) {
+        const change = (Math.random() - 0.45) * (type === 'gold' ? 0.5 : 0.05);
+        const currentPrice = +(lastPrice + change).toFixed(2);
+        
+        data.push({
+          x: new Date(Date.now() - i * 3600000),
+          o: +(currentPrice - (Math.random() * 0.05)).toFixed(2),
+          h: +(currentPrice + (Math.random() * 0.08)).toFixed(2),
+          l: +(currentPrice - (Math.random() * 0.08)).toFixed(2),
+          c: currentPrice
+        });
+        
+        lastPrice = currentPrice;
+      }
+      
+      return data;
+    }
+
+    // 5. 初始化黄金分时图
+    function initGoldLineChart() {
+      const ctx = document.getElementById('gold-line').getContext('2d');
+      const data = generateDefaultChartData('gold');
+      
+      goldLineChart = new Chart(ctx, {
+        type: 'line',
         data: {
-          datasets: [
-            {
-              label: "黄金价格（分时）",
-              data: Array.from({ length: 24 }, (_, i) => ({
-                x: new Date(Date.now() - (24 - i) * 3600000),
-                y: 772 + Math.random() * 2,
-              })),
-              borderColor: "#165DFF",
-              backgroundColor: "rgba(22, 93, 255, 0.1)",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.4, // 平滑曲线核心配置
-            },
-          ],
+          datasets: [{
+            label: '黄金价格',
+            data: data.map(item => ({ x: item.x, y: item.c })),
+            borderColor: '#165DFF',
+            backgroundColor: 'rgba(22, 93, 255, 0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: '#165DFF',
+            fill: true,
+            tension: 0.4 // 平滑曲线
+          }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "rgba(29, 29, 31, 0.9)",
+              backgroundColor: 'rgba(29, 29, 31, 0.9)',
               callbacks: {
-                label: (ctx) => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
-              },
-            },
+                label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`
+              }
+            }
           },
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: "#8A8F98" },
+              ticks: { color: '#8A8F98' }
             },
             y: {
-              grid: { color: "rgba(0, 0, 0, 0.05)" },
-              ticks: { color: "#8A8F98", callback: (v) => v.toFixed(2) },
-            },
-          },
-        },
+              position: 'right',
+              grid: { color: 'rgba(0, 0, 0, 0.05)' },
+              ticks: { 
+                color: '#8A8F98',
+                callback: v => v.toFixed(2)
+              }
+            }
+          }
+        }
       });
     }
 
-    // 初始化黄金K线图
-    function renderGoldCandlestickChart() {
-      const ctx = document.getElementById("gold-candlestick").getContext("2d");
-      // 模拟K线数据（OHLC）
-      const data = Array.from({ length: 20 }, (_, i) => {
-        const open = 772 + Math.random() * 1;
-        const close = open + (Math.random() - 0.5) * 1;
-        return {
-          x: new Date(Date.now() - (20 - i) * 3600000),
-          o: open,
-          h: Math.max(open, close) + Math.random() * 0.5,
-          l: Math.min(open, close) - Math.random() * 0.5,
-          c: close,
-        };
-      });
-      return new Chart(ctx, {
-        type: "candlestick",
+    // 6. 初始化黄金K线图
+    function initGoldCandlestickChart() {
+      const ctx = document.getElementById('gold-candlestick').getContext('2d');
+      const data = generateDefaultChartData('gold', 30);
+      
+      // 转换为K线图所需格式
+      const candleData = data.map(item => ({
+        x: item.x,
+        o: item.o,
+        h: item.h,
+        l: item.l,
+        c: item.c
+      }));
+      
+      goldCandlestickChart = new Chart(ctx, {
+        type: 'bar',
         data: {
           datasets: [
+            // 实体部分
             {
-              label: "黄金K线",
-              data: data,
-              borderColor: (ctx) =>
-                ctx.dataset.data[ctx.dataIndex].o < ctx.dataset.data[ctx.dataIndex].c
-                  ? "#34c759"
-                  : "#ff3b30",
-              backgroundColor: (ctx) =>
-                ctx.dataset.data[ctx.dataIndex].o < ctx.dataset.data[ctx.dataIndex].c
-                  ? "rgba(52, 199, 89, 0.7)"
-                  : "rgba(255, 59, 48, 0.7)",
-              borderWidth: 1,
+              data: candleData.map(item => ({
+                x: item.x,
+                y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
+              })),
+              backgroundColor: candleData.map(item => 
+                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+              ),
+              borderWidth: 0,
+              barPercentage: 0.6
             },
-          ],
+            // 影线部分
+            {
+              data: candleData.map(item => ({
+                x: item.x,
+                y: [item.l, item.h - item.l]
+              })),
+              backgroundColor: candleData.map(item => 
+                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+              ),
+              borderWidth: 0,
+              barPercentage: 0.1
+            }
+          ]
         },
         options: {
           responsive: true,
@@ -309,48 +442,166 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (ctx) => [
-                  `开盘: ${ctx.dataset.data[ctx.dataIndex].o.toFixed(2)}`,
-                  `最高: ${ctx.dataset.data[ctx.dataIndex].h.toFixed(2)}`,
-                  `最低: ${ctx.dataset.data[ctx.dataIndex].l.toFixed(2)}`,
-                  `收盘: ${ctx.dataset.data[ctx.dataIndex].c.toFixed(2)}`,
-                ],
-              },
-            },
+                label: function(ctx) {
+                  const index = ctx.dataIndex;
+                  const item = candleData[index];
+                  return [
+                    `开盘: ${item.o.toFixed(2)}`,
+                    `最高: ${item.h.toFixed(2)}`,
+                    `最低: ${item.l.toFixed(2)}`,
+                    `收盘: ${item.c.toFixed(2)}`
+                  ];
+                }
+              }
+            }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { color: "#8A8F98" } },
-            y: { grid: { color: "rgba(0, 0, 0, 0.05)" }, ticks: { color: "#8A8F98" } },
-          },
-        },
+            x: { grid: { display: false }, ticks: { color: '#8A8F98' } },
+            y: {
+              position: 'right',
+              grid: { color: 'rgba(0, 0, 0, 0.05)' },
+              ticks: { color: '#8A8F98' }
+            }
+          }
+        }
       });
     }
 
-    // 白银图表同理（复制黄金逻辑，替换ID和颜色）
-    function renderSilverLineChart() {
-      const ctx = document.getElementById("silver-line").getContext("2d");
-      return new Chart(ctx, {
-        type: "line",
+    // 7. 初始化白银图表（分时+K线）
+    function initSilverLineChart() {
+      const ctx = document.getElementById('silver-line').getContext('2d');
+      const data = generateDefaultChartData('silver');
+      
+      silverLineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: '白银价格',
+            data: data.map(item => ({ x: item.x, y: item.c })),
+            borderColor: '#8A8F98',
+            backgroundColor: 'rgba(138, 143, 152, 0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.4
+          }]
+        },
+        options: goldLineChart.options // 复用黄金图表配置
+      });
+    }
+
+    function initSilverCandlestickChart() {
+      const ctx = document.getElementById('silver-candlestick').getContext('2d');
+      const data = generateDefaultChartData('silver', 30);
+      
+      const candleData = data.map(item => ({
+        x: item.x,
+        o: item.o,
+        h: item.h,
+        l: item.l,
+        c: item.c
+      }));
+      
+      silverCandlestickChart = new Chart(ctx, {
+        type: 'bar',
         data: {
           datasets: [
             {
-              label: "白银价格（分时）",
-              data: Array.from({ length: 24 }, (_, i) => ({
-                x: new Date(Date.now() - (24 - i) * 3600000),
-                y: 8.78 + Math.random() * 0.2,
+              data: candleData.map(item => ({
+                x: item.x,
+                y: [Math.min(item.o, item.c), Math.abs(item.o - item.c)]
               })),
-              borderColor: "#8A8F98",
-              backgroundColor: "rgba(138, 143, 152, 0.1)",
-              borderWidth 152, 0.1)",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.4,
+              backgroundColor: candleData.map(item => 
+                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+              ),
+              borderWidth: 0,
+              barPercentage: 0.6
             },
-          ],
+            {
+              data: candleData.map(item => ({
+                x: item.x,
+                y: [item.l, item.h - item.l]
+              })),
+              backgroundColor: candleData.map(item => 
+                item.o < item.c ? 'rgba(52, 199, 89, 0.7)' : 'rgba(255, 59, 48, 0.7)'
+              ),
+              borderWidth: 0,
+              barPercentage: 0.1
+            }
+          ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false }, ticks: { color
+        options: goldCandlestickChart.options // 复用黄金图表配置
+      });
+    }
+
+    // 8. 更新图表数据
+    function updateChartsWithNewPrice(type, newPrice) {
+      const now = new Date();
+      const chart = type === 'gold' ? goldLineChart : silverLineChart;
+      const candlestickChart = type === 'gold' ? goldCandlestickChart : silverCandlestickChart;
+      
+      if (!chart || !candlestickChart) return;
+      
+      // 更新分时图
+      const lastDataPoint = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
+      chart.data.datasets[0].data.push({
+        x: now,
+        y: newPrice
+      });
+      
+      // 保持数据点数量
+      if (chart.data.datasets[0].data.length > 24) {
+        chart.data.datasets[0].data.shift();
+      }
+      chart.update();
+      
+      // 更新K线图
+      const lastCandle = candlestickChart.data.datasets[0].data[candlestickChart.data.datasets[0].data.length - 1];
+      candlestickChart.data.datasets[0].data.push({
+        x: now,
+        y: [Math.min(lastDataPoint.y, newPrice), Math.abs(lastDataPoint.y - newPrice)]
+      });
+      
+      if (candlestickChart.data.datasets[0].data.length > 30) {
+        candlestickChart.data.datasets[0].data.shift();
+      }
+      candlestickChart.update();
+    }
+
+    // 9. 初始化所有图表
+    function initAllCharts() {
+      initGoldLineChart();
+      initGoldCandlestickChart();
+      initSilverLineChart();
+      initSilverCandlestickChart();
+    }
+
+    // 10. 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化图表
+      initAllCharts();
+      
+      // 加载价格数据
+      fetchAndUpdatePrices();
+      
+      // 设置定时刷新（5分钟一次）
+      setInterval(fetchAndUpdatePrices, 300000);
+      
+      // 绑定刷新按钮事件
+      document.getElementById('refresh-gold').addEventListener('click', function() {
+        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i>刷新中';
+        fetchAndUpdatePrices().then(() => {
+          this.innerHTML = '<i class="fa fa-refresh mr-1"></i>刷新';
+        });
+      });
+      
+      document.getElementById('refresh-silver').addEventListener('click', function() {
+        this.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i>刷新中';
+        fetchAndUpdatePrices().then(() => {
+          this.innerHTML = '<i class="fa fa-refresh mr-1"></i>刷新';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
+    
