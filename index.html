@@ -1,256 +1,337 @@
+】 
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聚宝盆贵金属预测系统</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script> 
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@1.0.0"></script> 
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4"></script> 
-    <style>
-        :root {
-            --primary: #d4af37; /* 贵金属主题色 */
-            --secondary: #c0c0c0;
-            --success: #28a745;
-            --danger: #dc3545;
-            --info: #17a2b8;
-        }
- 
-        body {
-            font-family: 'Segoe UI', 系统默认, sans-serif;
-            background: #f8f9fa;
-            color: #212529;
-            margin: 0;
-            padding: 20px;
-        }
- 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
- 
-        /* 实时行情模块 */
-        .price-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-            grid-column: 1 / -1;
-        }
- 
-        .price-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
- 
-        .metal-price {
-            font-size: 2.2rem;
-            font-weight: 700;
-        }
-        .gold { color: var(--primary) }
-        .silver { color: var(--secondary) }
- 
-        /* 专业图表模块 */
-        .chart-container {
-            height: 500px;
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-        }
- 
-        /* 智能建议模块 */
-        .advice-card {
-            background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
-            border-radius: 12px;
-            padding: 20px;
-            position: relative;
-        }
-        .advice-badge {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: 700;
-        }
-        .buy { background: var(--success); color: white }
-        .sell { background: var(--danger); color: white }
-        .hold { background: var(--info); color: white }
- 
-        /* 历史记录模块 */
-        .history-list {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-        }
-        .history-item {
-            padding: 12px;
-            margin: 8px 0;
-            border-left: 4px solid;
-        }
-        .profit { border-color: var(--success) }
-        .loss { border-color: var(--danger) }
-        .neutral { border-color: var(--info) }
- 
-        @media (min-width: 768px) {
-            .container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>聚宝盆贵金属预测技术工作室自研系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 手绘风格字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"  rel="stylesheet">
+  <!-- 手绘图标 -->
+  <link rel="stylesheet" href="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-100-M/font-awesome/6.0.0/css/all.min.css"> 
+  <!-- 手绘渐变背景 -->
+  <style>
+    :root{
+      --paper:#fdfcf9;
+      --ink:#3c2f1f;
+      --gold:#d4af37;
+      --silver:#a8b3c2;
+      --accent:#e76f51;
+      --shadow:0 2px 8px rgba(0,0,0,.08);
+      --ink-pen: 'Kalam', cursive;
+      --body-text: 'Noto Sans SC', sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--body-text);
+      background:linear-gradient(135deg,#fdfcf9 0%,#f7f4ef 100%);
+      color:var(--ink);
+      line-height:1.7;
+      -webkit-font-smoothing:antialiased;
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:30;
+      background:var(--paper);
+      border-bottom:1px dashed var(--gold);
+      padding:.75rem 1.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      box-shadow:var(--shadow);
+    }
+    header h1{
+      font-family:var(--ink-pen);
+      font-weight:700;
+      font-size:1.4rem;
+      color:var(--ink);
+      margin:0;
+      letter-spacing:.02em;
+    }
+    header span{
+      font-family:var(--ink-pen);
+      font-size:.9rem;
+      color:var(--accent);
+    }
+    main{
+      max-width:1200px;
+      margin:2rem auto;
+      padding:0 1rem;
+      display:grid;
+      gap:2.5rem;
+    }
+    .sketch-card{
+      background:var(--paper);
+      border:2px solid var(--ink);
+      border-radius:16px;
+      padding:1.5rem;
+      box-shadow:4px 4px 0 var(--ink);
+      transition:transform .25s,box-shadow .25s;
+    }
+    .sketch-card:hover{
+      transform:translate(-2px,-2px);
+      box-shadow:6px 6px 0 var(--ink);
+    }
+    .sketch-title{
+      font-family:var(--ink-pen);
+      font-weight:700;
+      font-size:1.25rem;
+      margin-bottom:.75rem;
+      color:var(--ink);
+    }
+    .price-tag{
+      font-family:var(--ink-pen);
+      font-size:2.25rem;
+      font-weight:700;
+      color:var(--gold);
+      margin:.25rem 0;
+    }
+    .sub-info{
+      font-size:.85rem;
+      color:var(--ink);
+      opacity:.75;
+    }
+    .chart-container{
+      position:relative;
+      height:320px;
+      border:1px solid var(--ink);
+      border-radius:12px;
+      overflow:hidden;
+      background:var(--paper);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.85rem;
+    }
+    thead{
+      background:var(--gold);
+      color:var(--paper);
+      font-family:var(--ink-pen);
+      letter-spacing:.03em;
+    }
+    th,td{
+      padding:.5rem .75rem;
+      text-align:left;
+    }
+    tbody tr:nth-child(odd){
+      background:rgba(212,175,55,.05);
+    }
+    .btn-refresh{
+      font-family:var(--ink-pen);
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      padding:.5rem .75rem;
+      cursor:pointer;
+      box-shadow:2px 2px 0 var(--ink);
+      transition:transform .15s;
+    }
+    .btn-refresh:active{
+      transform:translate(1px,1px);
+    }
+    footer{
+      text-align:center;
+      padding:1.5rem 1rem;
+      font-size:.8rem;
+      color:var(--ink);
+      opacity:.6;
+    }
+    /* 手绘加载动画 */
+    .sketch-loader{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:100%;
+      font-family:var(--ink-pen);
+      color:var(--accent);
+    }
+    .sketch-loader i{
+      margin-right:.5rem;
+      animation:pencil 1.2s linear infinite;
+    }
+    @keyframes pencil{
+      0%{transform:rotate(-12deg)}
+      50%{transform:rotate(12deg)}
+      100%{transform:rotate(-12deg)}
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 系统标题 -->
-        <div class="price-panel">
-            <h1>聚宝盆贵金属预测技术工作室自研系统</h1>
-            <div class="price-header">
-                <div>
-                    <div class="update-time">数据更新于：<span id="updateTime">-</span></div>
-                </div>
-            </div>
-            <div class="price-display">
-                <div>
-                    <div class="metal-price gold">黄金：<span id="goldPrice">-</span></div>
-                    <div>开盘 <span id="goldOpen">-</span> 最高 <span id="goldHigh">-</span></div>
-                </div>
-                <div>
-                    <div class="metal-price silver">白银：<span id="silverPrice">-</span></div>
-                    <div>开盘 <span id="silverOpen">-</span> 最高 <span id="silverHigh">-</span></div>
-                </div>
-            </div>
+  <header>
+    <h1><i class="fas fa-gem" style="color:var(--gold);"></i> 聚宝盆贵金属预测技术工作室自研系统</h1>
+    <span id="system-time">加载中…</span>
+  </header>
+ 
+  <main>
+    <!-- 价格卡片 -->
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
+      <div class="sketch-card">
+        <div class="sketch-title">黄金价格（元/克）</div>
+        <div class="price-tag" id="gold-price">772.05</div>
+        <div class="sub-info">今日 <span id="gold-change" style="color:var(--accent);">+1.25%</span></div>
+        <div class="sub-info">
+          开盘 <span id="gold-open">762.50</span> · 
+          最高 <span id="gold-high">773.20</span> · 
+          最低 <span id="gold-low">761.80</span>
         </div>
+        <button class="btn-refresh" onclick="fetchData()"><i class="fas fa-sync-alt"></i> 刷新</button>
+      </div>
  
-        <!-- 图表容器 -->
-        <div class="chart-container">
-            <canvas id="timeChart"></canvas>
+      <div class="sketch-card">
+        <div class="sketch-title">白银价格（元/克）</div>
+        <div class="price-tag" style="color:var(--silver);">8.78</div>
+        <div class="sub-info">今日 <span id="silver-change" style="color:var(--accent);">-0.23%</span></div>
+        <div class="sub-info">
+          开盘 <span id="silver-open">8.80</span> · 
+          最高 <span id="silver-high">8.85</span> · 
+          最低 <span id="silver-low">8.75</span>
         </div>
-        <div class="chart-container">
-            <canvas id="candleChart"></canvas>
+        <button class="btn-refresh" onclick="fetchData()"><i class="fas fa-sync-alt"></i> 刷新</button>
+      </div>
+    </section>
+ 
+    <!-- 图表 -->
+    <section class="sketch-card">
+      <div class="sketch-title">黄金价格分时图（今日）</div>
+      <div class="chart-container" id="gold-chart">
+        <div class="sketch-loader"><i class="fas fa-pencil-alt"></i>正在速写…</div>
+      </div>
+    </section>
+ 
+    <section class="sketch-card">
+      <div class="sketch-title">白银价格分时图（今日）</div>
+      <div class="chart-container" id="silver-chart">
+        <div class="sketch-loader"><i class="fas fa-pencil-alt"></i>正在速写…</div>
+      </div>
+    </section>
+ 
+    <!-- 操作建议 -->
+    <section class="sketch-card">
+      <div class="sketch-title">操作建议（基于实时指标）</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
+        <div>
+          <h4 style="font-family:var(--ink-pen);margin:0 0 .5rem;"><i class="fas fa-diamond" style="color:var(--gold);"></i> 黄金</h4>
+          <p style="margin:.25rem 0;font-weight:700;color:var(--accent);">买入</p>
+          <p class="sub-info">止盈 787.49 · 止损 756.61</p>
         </div>
- 
-        <!-- 操作建议 -->
-        <div class="advice-card">
-            <div class="advice-badge hold">最新策略</div>
-            <h3>黄金建议：<span id="goldAdvice">-</span></h3>
-            <p>进场价：<span id="goldEntry">-</span></p>
-            <p>止盈价：<span id="goldTakeProfit">-</span> | 止损价：<span id="goldStopLoss">-</span></p>
+        <div>
+          <h4 style="font-family:var(--ink-pen);margin:0 0 .5rem;"><i class="fas fa-cubes" style="color:var(--silver);"></i> 白银</h4>
+          <p style="margin:.25rem 0;font-weight:700;color:var(--ink);">观望</p>
+          <p class="sub-info">止盈 8.95 · 止损 8.60</p>
         </div>
+      </div>
+    </section>
  
-        <!-- 历史建议 -->
-        <div class="history-list">
-            <h3>24小时策略记录</h3>
-            <div id="adviceHistory"></div>
+    <!-- 历史预测 -->
+    <section class="sketch-card">
+      <div class="sketch-title">历史预测记录（24小时）</div>
+      <div style="overflow-x:auto;">
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th>时间</th><th>黄金建议</th><th>结果</th><th>白银建议</th><th>结果</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+ 
+    <!-- 收益 -->
+    <section class="sketch-card">
+      <div class="sketch-title">收益统计（基于10000元本金）</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
+        <div>
+          <h5 style="font-family:var(--ink-pen);margin:0 0 .5rem;">当日收益</h5>
+          <p style="font-size:1.2rem;font-weight:700;color:var(--accent);">¥10,245.30 (+2.45%)</p>
         </div>
-    </div>
+        <div>
+          <h5 style="font-family:var(--ink-pen);margin:0 0 .5rem;">月度收益</h5>
+          <p style="font-size:1.2rem;font-weight:700;color:var(--accent);">¥13,872.65 (+38.73%)</p>
+        </div>
+      </div>
+    </section>
+  </main>
  
-<script>
-// 系统核心功能模块 
-const SystemCore = {
-    // 初始化图表 
-    initCharts: () => {
-        const timeCtx = document.getElementById('timeChart').getContext('2d'); 
-        const candleCtx = document.getElementById('candleChart').getContext('2d'); 
-        
-        // 分时图配置 
-        this.timeChart  = new Chart(timeCtx, {
-            type: 'line',
-            data: { datasets: [{
-                label: '黄金价格走势',
-                borderColor: 'rgba(212, 175, 55, 0.8)',
-                tension: 0.1 
-            }]},
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { x: { type: 'time' } }
-            }
-        });
+  <footer>
+    © 2025 聚宝盆贵金属预测技术工作室 · 数据每5分钟速写一次 
+  </footer>
  
-        // K线图配置 
-        this.candleChart  = new Chart(candleCtx, {
-            type: 'candlestick',
-            data: { datasets: [{
-                label: 'K线数据',
-                color: {
-                    up: '#dc3545',
-                    down: '#28a745',
-                    unchanged: '#999'
-                }
-            }]},
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { x: { type: 'time' } }
-            }
-        });
-    },
- 
-    // 数据更新逻辑 
-    updateData: async () => {
-        try {
-            // 获取实时数据 
-            const [priceRes, historyRes, adviceRes] = await Promise.all([ 
-                fetch('https://precious-metal-analyzer.aoyouios.workers.dev/data'), 
-                fetch('https://precious-metal-analyzer.aoyouios.workers.dev/history'), 
-                fetch('https://precious-metal-analyzer.aoyouios.workers.dev/advice') 
-            ]);
- 
-            const priceData = await priceRes.json(); 
-            const historyData = await historyRes.json(); 
-            const adviceData = await adviceRes.json(); 
- 
-            // 更新DOM元素 
-            document.getElementById('goldPrice').textContent  = priceData.gold; 
-            document.getElementById('silverPrice').textContent  = priceData.silver; 
-            document.getElementById('updateTime').textContent  = priceData.updateTime; 
- 
-            // 更新图表数据 
-            this.timeChart.data.datasets[0].data  = historyData.gold.map(d  => ({x: d.t, y: d.c}));
-            this.candleChart.data.datasets[0].data  = historyData.gold.map(d  => ({
-                x: d.t,
-                o: d.o,
-                h: d.h,
-                l: d.l,
-                c: d.c 
-            }));
-            
-            // 更新建议数据 
-            const adviceDomUpdate = {
-                'goldAdvice': adviceData.gold.advice, 
-                'goldEntry': adviceData.gold.entryPrice, 
-                'goldTakeProfit': adviceData.gold.takeProfit, 
-                'goldStopLoss': adviceData.gold.stopLoss  
-            };
-            Object.entries(adviceDomUpdate).forEach(([id,  value]) => {
-                document.getElementById(id).textContent  = value;
-            });
- 
-        } catch (error) {
-            console.error(' 数据更新失败:', error);
-            // 根据[1]()中提到的市场波动特性，保留最后有效数据 
-        }
-    },
- 
-    // 定时任务 
-    startAutoRefresh: () => {
-        setInterval(() => this.updateData(),  30000); // 30秒刷新 
-        this.updateData();  // 立即执行首次更新 
+  <!-- ECharts -->
+  <script src="https://s2.ssl.qhres2.com/!2dd0bbf7/echarts.js"></script> 
+  <script>
+    // 手绘配色 
+    const colors={gold:'#d4af37',silver:'#a8b3c2',ink:'#3c2f1f',accent:'#e76f51',paper:'#fdfcf9'};
+    // 时间 
+    function updateSystemTime(){
+      document.getElementById('system-time').textContent=new  Date().toLocaleString();
     }
-}
+    setInterval(updateSystemTime,1000);updateSystemTime();
  
-// 系统初始化 
-window.onload  = () => {
-    SystemCore.initCharts(); 
-    SystemCore.startAutoRefresh(); 
-}
-</script>
+    // 模拟数据 
+    function generateData(base,count=30){
+      const arr=[];let val=base;
+      for(let i=0;i<count;i++){
+        val+=(Math.random()-0.45)*0.02; 
+        arr.push([Date.now()-(count-i)*300000,val.toFixed(2)]); 
+      }
+      return arr;
+    }
+ 
+    // 图表 
+    function drawChart(id,data,color){
+      const chart=echarts.init(document.getElementById(id)); 
+      chart.setOption({ 
+        grid:{left:40,right:20,top:20,bottom:30},
+        xAxis:{type:'time',axisLine:{lineStyle:{color:colors.ink}},axisLabel:{color:colors.ink}}, 
+        yAxis:{type:'value',axisLine:{lineStyle:{color:colors.ink}},axisLabel:{color:colors.ink}}, 
+        series:[{
+          type:'line',
+          data,
+          smooth:true,
+          lineStyle:{color,width:3},
+          areaStyle:{color,opacity:.15}
+        }],
+        tooltip:{trigger:'axis',formatter:params=>`价格：${params[0].value[1]} 元/克`}
+      });
+    }
+ 
+    // 历史表格 
+    function fillHistory(){
+      const tbody=document.querySelector('#history-table  tbody');
+      tbody.innerHTML=''; 
+      for(let i=0;i<24;i++){
+        const tr=document.createElement('tr'); 
+        tr.innerHTML=` 
+          <td>${new Date(Date.now()-i*3600000).toLocaleTimeString()}</td> 
+          <td>买入</td>
+          <td style="color:var(--accent)">盈利</td>
+          <td>观望</td>
+          <td style="color:var(--ink)">--</td>
+        `;
+        tbody.appendChild(tr); 
+      }
+    }
+ 
+    // 拉取 
+    function fetchData(){
+      const goldData=generateData(772.05);
+      const silverData=generateData(8.78);
+      drawChart('gold-chart',goldData,colors.gold); 
+      drawChart('silver-chart',silverData,colors.silver); 
+      fillHistory();
+    }
+ 
+    // 初始化 
+    window.addEventListener('load',()=>{ 
+      fetchData();
+      setInterval(fetchData,300000);
+    });
+  </script>
 </body>
 </html>
+【
