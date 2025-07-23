@@ -609,4 +609,39 @@
             const goldPriceElem = document.getElementById('gold-price');
             const currentGoldPrice = parseFloat(goldPriceElem.textContent);
             const newGoldPrice = currentGoldPrice + (Math.random() - 0.5) * 0.3;
-            goldPriceElem.textContent = newGoldPrice.toFixed
+            goldPriceElem.textContent = newGoldPrice.toFixed(2);
+            
+            // 更新白银价格
+            const silverPriceElem = document.getElementById('silver-price');
+            const currentSilverPrice = parseFloat(silverPriceElem.textContent);
+            const newSilverPrice = currentSilverPrice + (Math.random() - 0.5) * 0.05;
+            silverPriceElem.textContent = newSilverPrice.toFixed(2);
+            
+            // 更新时间
+            document.getElementById('gold-update-time').textContent = 
+                now.toISOString().replace('T', ' ').substring(0, 19);
+            document.getElementById('silver-update-time').textContent = 
+                now.toISOString().replace('T', ' ').substring(0, 19);
+            
+            // 更新图表数据
+            if (goldChart) {
+                const data = goldChart.data.datasets[0].data;
+                data.push({x: now, y: newGoldPrice});
+                if (data.length > 125) {
+                    data.shift();
+                }
+                goldChart.update();
+            }
+            
+            if (silverChart) {
+                const data = silverChart.data.datasets[0].data;
+                data.push({x: now, y: newSilverPrice});
+                if (data.length > 130) {
+                    data.shift();
+                }
+                silverChart.update();
+            }
+        }
+    </script>
+</body>
+</html>
