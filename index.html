@@ -1,337 +1,326 @@
-】 
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>聚宝盆贵金属预测技术工作室自研系统</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- 手绘风格字体 -->
-  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"  rel="stylesheet">
-  <!-- 手绘图标 -->
-  <link rel="stylesheet" href="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-100-M/font-awesome/6.0.0/css/all.min.css"> 
-  <!-- 手绘渐变背景 -->
-  <style>
-    :root{
-      --paper:#fdfcf9;
-      --ink:#3c2f1f;
-      --gold:#d4af37;
-      --silver:#a8b3c2;
-      --accent:#e76f51;
-      --shadow:0 2px 8px rgba(0,0,0,.08);
-      --ink-pen: 'Kalam', cursive;
-      --body-text: 'Noto Sans SC', sans-serif;
+  <script src="https://cdn.tailwindcss.com?v=3.3.2"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script> 
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"  rel="stylesheet" />
+ 
+  <!-- Tailwind 自定义主题 -->
+  <script>
+    tailwind.config  = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0071e3',
+            success: '#34c759',
+            danger: '#ff3b30',
+            neutral: '#86868b',
+            pending: '#ffcc00',
+            apple: {
+              light: '#f5f5f7',
+              card: '#ffffff',
+              border: '#e2e2e7'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        }
+      }
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--body-text);
-      background:linear-gradient(135deg,#fdfcf9 0%,#f7f4ef 100%);
-      color:var(--ink);
-      line-height:1.7;
-      -webkit-font-smoothing:antialiased;
-    }
-    header{
-      position:sticky;
-      top:0;
-      z-index:30;
-      background:var(--paper);
-      border-bottom:1px dashed var(--gold);
-      padding:.75rem 1.5rem;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      box-shadow:var(--shadow);
-    }
-    header h1{
-      font-family:var(--ink-pen);
-      font-weight:700;
-      font-size:1.4rem;
-      color:var(--ink);
-      margin:0;
-      letter-spacing:.02em;
-    }
-    header span{
-      font-family:var(--ink-pen);
-      font-size:.9rem;
-      color:var(--accent);
-    }
-    main{
-      max-width:1200px;
-      margin:2rem auto;
-      padding:0 1rem;
-      display:grid;
-      gap:2.5rem;
-    }
-    .sketch-card{
-      background:var(--paper);
-      border:2px solid var(--ink);
-      border-radius:16px;
-      padding:1.5rem;
-      box-shadow:4px 4px 0 var(--ink);
-      transition:transform .25s,box-shadow .25s;
-    }
-    .sketch-card:hover{
-      transform:translate(-2px,-2px);
-      box-shadow:6px 6px 0 var(--ink);
-    }
-    .sketch-title{
-      font-family:var(--ink-pen);
-      font-weight:700;
-      font-size:1.25rem;
-      margin-bottom:.75rem;
-      color:var(--ink);
-    }
-    .price-tag{
-      font-family:var(--ink-pen);
-      font-size:2.25rem;
-      font-weight:700;
-      color:var(--gold);
-      margin:.25rem 0;
-    }
-    .sub-info{
-      font-size:.85rem;
-      color:var(--ink);
-      opacity:.75;
-    }
-    .chart-container{
-      position:relative;
-      height:320px;
-      border:1px solid var(--ink);
-      border-radius:12px;
-      overflow:hidden;
-      background:var(--paper);
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:.85rem;
-    }
-    thead{
-      background:var(--gold);
-      color:var(--paper);
-      font-family:var(--ink-pen);
-      letter-spacing:.03em;
-    }
-    th,td{
-      padding:.5rem .75rem;
-      text-align:left;
-    }
-    tbody tr:nth-child(odd){
-      background:rgba(212,175,55,.05);
-    }
-    .btn-refresh{
-      font-family:var(--ink-pen);
-      background:var(--accent);
-      color:#fff;
-      border:none;
-      border-radius:8px;
-      padding:.5rem .75rem;
-      cursor:pointer;
-      box-shadow:2px 2px 0 var(--ink);
-      transition:transform .15s;
-    }
-    .btn-refresh:active{
-      transform:translate(1px,1px);
-    }
-    footer{
-      text-align:center;
-      padding:1.5rem 1rem;
-      font-size:.8rem;
-      color:var(--ink);
-      opacity:.6;
-    }
-    /* 手绘加载动画 */
-    .sketch-loader{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      height:100%;
-      font-family:var(--ink-pen);
-      color:var(--accent);
-    }
-    .sketch-loader i{
-      margin-right:.5rem;
-      animation:pencil 1.2s linear infinite;
-    }
-    @keyframes pencil{
-      0%{transform:rotate(-12deg)}
-      50%{transform:rotate(12deg)}
-      100%{transform:rotate(-12deg)}
+  </script>
+ 
+  <!-- 自定义样式 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .chart-container {
+        height: 400px !important;
+        width: 100% !important;
+        position: relative;
+        overflow: hidden;
+      }
+      .chart-loading {
+        @apply absolute inset-0 flex items-center justify-center bg-white/80 z-10;
+      }
+      .result-tag {
+        @apply px-2 py-1 rounded-full text-xs font-medium;
+      }
     }
   </style>
 </head>
-<body>
-  <header>
-    <h1><i class="fas fa-gem" style="color:var(--gold);"></i> 聚宝盆贵金属预测技术工作室自研系统</h1>
-    <span id="system-time">加载中…</span>
+ 
+<body class="bg-apple-light text-[#1d1d1f]">
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-apple-border">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center">
+        <i class="fa fa-diamond text-primary mr-2"></i>
+        <h1 class="font-semibold">聚宝盆贵金属预测技术工作室自研系统</h1>
+      </div>
+      <span id="system-time" class="text-neutral text-sm">加载中...</span>
+    </div>
   </header>
  
-  <main>
+  <main class="max-w-7xl mx-auto px-4 py-6">
     <!-- 价格卡片 -->
-    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
-      <div class="sketch-card">
-        <div class="sketch-title">黄金价格（元/克）</div>
-        <div class="price-tag" id="gold-price">772.05</div>
-        <div class="sub-info">今日 <span id="gold-change" style="color:var(--accent);">+1.25%</span></div>
-        <div class="sub-info">
-          开盘 <span id="gold-open">762.50</span> · 
-          最高 <span id="gold-high">773.20</span> · 
-          最低 <span id="gold-low">761.80</span>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div class="bg-apple-card rounded-xl p-5 shadow-sm">
+        <h2 class="text-neutral text-sm mb-2">黄金价格（元/克）</h2>
+        <div class="text-3xl font-semibold mb-2" id="gold-price">772.05</div>
+        <div class="text-sm mb-1">
+          <span id="gold-change" class="text-success">+1.25%（今日）</span>
         </div>
-        <button class="btn-refresh" onclick="fetchData()"><i class="fas fa-sync-alt"></i> 刷新</button>
-      </div>
- 
-      <div class="sketch-card">
-        <div class="sketch-title">白银价格（元/克）</div>
-        <div class="price-tag" style="color:var(--silver);">8.78</div>
-        <div class="sub-info">今日 <span id="silver-change" style="color:var(--accent);">-0.23%</span></div>
-        <div class="sub-info">
-          开盘 <span id="silver-open">8.80</span> · 
-          最高 <span id="silver-high">8.85</span> · 
-          最低 <span id="silver-low">8.75</span>
+        <div class="text-xs text-neutral mb-4">
+          开盘：<span id="gold-open">762.50</span> 元/克 | 最高：<span id="gold-high">773.20</span> 元/克 | 最低：<span id="gold-low">761.80</span> 元/克 
         </div>
-        <button class="btn-refresh" onclick="fetchData()"><i class="fas fa-sync-alt"></i> 刷新</button>
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral">更新时间：<span id="gold-time">2025/7/24 16:45</span></span>
+          <button id="refresh-gold" class="text-primary hover:underline">
+            <i class="fa fa-refresh mr-1"></i>刷新
+          </button>
+        </div>
       </div>
-    </section>
  
-    <!-- 图表 -->
-    <section class="sketch-card">
-      <div class="sketch-title">黄金价格分时图（今日）</div>
-      <div class="chart-container" id="gold-chart">
-        <div class="sketch-loader"><i class="fas fa-pencil-alt"></i>正在速写…</div>
+      <div class="bg-apple-card rounded-xl p-5 shadow-sm">
+        <h2 class="text-neutral text-sm mb-2">白银价格（元/克）</h2>
+        <div class="text-3xl font-semibold mb-2" id="silver-price">8.78</div>
+        <div class="text-sm mb-1">
+          <span id="silver-change" class="text-danger">-0.23%（今日）</span>
+        </div>
+        <div class="text-xs text-neutral mb-4">
+          开盘：<span id="silver-open">8.80</span> 元/克 | 最高：<span id="silver-high">8.85</span> 元/克 | 最低：<span id="silver-low">8.75</span> 元/克
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral">更新时间：<span id="silver-time">2025/7/24 16:45</span></span>
+          <button id="refresh-silver" class="text-primary hover:underline">
+            <i class="fa fa-refresh mr-1"></i>刷新
+          </button>
+        </div>
       </div>
-    </section>
+    </div>
  
-    <section class="sketch-card">
-      <div class="sketch-title">白银价格分时图（今日）</div>
-      <div class="chart-container" id="silver-chart">
-        <div class="sketch-loader"><i class="fas fa-pencil-alt"></i>正在速写…</div>
+    <!-- 黄金分时图 -->
+    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-medium">黄金价格分时图（今日）</h2>
+        <div class="text-sm text-neutral">
+          数据点：<span id="gold-data-count">0</span>个 | 时间范围：<span id="gold-time-range">--</span>
+        </div>
       </div>
-    </section>
+      <div class="chart-container">
+        <div id="gold-chart-loading" class="chart-loading">
+          <i class="fa fa-circle-o-notch fa-spin text-primary text-2xl"></i>
+        </div>
+        <canvas id="gold-line"></canvas>
+        <div id="gold-chart-error" class="chart-loading hidden">
+          <div class="text-center">
+            <i class="fa fa-exclamation-triangle text-danger mb-2"></i>
+            <p>图表加载失败，点击重试</p>
+            <button onclick="initGoldChart()" class="mt-2 text-primary text-sm">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- 白银分时图 -->
+    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-medium">白银价格分时图（今日）</h2>
+        <div class="text-sm text-neutral">
+          数据点：<span id="silver-data-count">0</span>个 | 时间范围：<span id="silver-time-range">--</span>
+        </div>
+      </div>
+      <div class="chart-container">
+        <div id="silver-chart-loading" class="chart-loading">
+          <i class="fa fa-circle-o-notch fa-spin text-primary text-2xl"></i>
+        </div>
+        <canvas id="silver-line"></canvas>
+        <div id="silver-chart-error" class="chart-loading hidden">
+          <div class="text-center">
+            <i class="fa fa-exclamation-triangle text-danger mb-2"></i>
+            <p>图表加载失败，点击重试</p>
+            <button onclick="initSilverChart()" class="mt-2 text-primary text-sm">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
  
     <!-- 操作建议 -->
-    <section class="sketch-card">
-      <div class="sketch-title">操作建议（基于实时指标）</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
-        <div>
-          <h4 style="font-family:var(--ink-pen);margin:0 0 .5rem;"><i class="fas fa-diamond" style="color:var(--gold);"></i> 黄金</h4>
-          <p style="margin:.25rem 0;font-weight:700;color:var(--accent);">买入</p>
-          <p class="sub-info">止盈 787.49 · 止损 756.61</p>
+    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
+      <h2 class="font-medium mb-6">操作建议（基于实时指标）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-5 border border-apple-border rounded-lg">
+          <h3 class="font-medium mb-4 flex items-center">
+            <i class="fa fa-diamond text-primary mr-2"></i>黄金操作建议
+          </h3>
+ 
+          <div class="space-y-4 text-sm">
+            <div>
+              <span class="block text-neutral mb-1">核心建议：</span>
+              <span id="gold-advice" class="text-lg font-semibold text-success">买入</span>
+            </div>
+ 
+            <div class="p-3 bg-apple-light rounded-lg">
+              <span class="block font-medium mb-2">指标依据：</span>
+              <ul class="list-disc list-inside space-y-1 text-neutral" id="gold-advice-reasons">
+                <li>今日开盘价762.50元，当前价772.05元，涨幅1.25%</li>
+                <li>全天呈单边上涨趋势，未出现明显回调</li>
+                <li>最近1小时成交量较前一小时增加15%</li>
+                <li>相对开盘价溢价空间稳定扩大</li>
+              </ul>
+            </div>
+ 
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="block text-neutral">止盈价</span>
+                <span class="font-medium text-success" id="gold-take-profit">787.49 元/克</span>
+              </div>
+              <div>
+                <span class="block text-neutral">止损价</span>
+                <span class="font-medium text-danger" id="gold-stop-loss">756.61 元/克</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <h4 style="font-family:var(--ink-pen);margin:0 0 .5rem;"><i class="fas fa-cubes" style="color:var(--silver);"></i> 白银</h4>
-          <p style="margin:.25rem 0;font-weight:700;color:var(--ink);">观望</p>
-          <p class="sub-info">止盈 8.95 · 止损 8.60</p>
+ 
+        <div class="p-5 border border-apple-border rounded-lg">
+          <h3 class="font-medium mb-4 flex items-center">
+            <i class="fa fa-cubes text-primary mr-2"></i>白银操作建议
+          </h3>
+ 
+          <div class="space-y-4 text-sm">
+            <div>
+              <span class="block text-neutral mb-1">核心建议：</span>
+              <span id="silver-advice" class="text-lg font-semibold text-neutral">观望</span>
+            </div>
+ 
+            <div class="p-3 bg-apple-light rounded-lg">
+              <span class="block font-medium mb-2">指标依据：</span>
+              <ul class="list-disc list-inside space-y-1 text-neutral" id="silver-advice-reasons">
+                <li>今日开盘价8.80元，当前价8.78元，微跌0.23%</li>
+                <li>价格在窄幅区间内波动，振幅仅0.10元</li>
+                <li>成交量持续萎缩，市场交投清淡</li>
+                <li>相对开盘价始终在±0.3%范围内波动</li>
+              </ul>
+            </div>
+ 
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="block text-neutral">止盈价</span>
+                <span class="font-medium text-success" id="silver-take-profit">8.95 元/克</span>
+              </div>
+              <div>
+                <span class="block text-neutral">止损价</span>
+                <span class="font-medium text-danger" id="silver-stop-loss">8.60 元/克</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
  
-    <!-- 历史预测 -->
-    <section class="sketch-card">
-      <div class="sketch-title">历史预测记录（24小时）</div>
-      <div style="overflow-x:auto;">
-        <table id="history-table">
-          <thead>
+    <!-- 历史预测记录 -->
+    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
+      <h2 class="font-medium mb-4">历史预测记录（24小时）</h2>
+      <div class="overflow-x-auto max-h-[400px]">
+        <table class="min-w-full text-sm">
+          <thead class="bg-apple-light">
             <tr>
-              <th>时间</th><th>黄金建议</th><th>结果</th><th>白银建议</th><th>结果</th>
+              <th class="px-4 py-3 text-left text-neutral font-medium">时间</th>
+              <th class="px-4 py-3 text-left text-neutral font-medium">黄金建议</th>
+              <th class="px-4 py-3 text-left text-neutral font-medium">黄金结果</th>
+              <th class="px-4 py-3 text-left text-neutral font-medium">白银建议</th>
+              <th class="px-4 py-3 text-left text-neutral font-medium">白银结果</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="history-table">
+            <!-- 数据通过 JS 填充 -->
+          </tbody>
         </table>
       </div>
-    </section>
+    </div>
  
-    <!-- 收益 -->
-    <section class="sketch-card">
-      <div class="sketch-title">收益统计（基于10000元本金）</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
-        <div>
-          <h5 style="font-family:var(--ink-pen);margin:0 0 .5rem;">当日收益</h5>
-          <p style="font-size:1.2rem;font-weight:700;color:var(--accent);">¥10,245.30 (+2.45%)</p>
+    <!-- 收益统计 -->
+    <div class="bg-apple-card rounded-xl p-5 shadow-sm mb-6">
+      <h2 class="font-medium mb-6">收益统计（基于10000元本金）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 当日收益 -->
+        <div class="p-6 border border-apple-border rounded-xl bg-white">
+          <h3 class="text-lg font-medium mb-4 flex items-center">
+            <i class="fa fa-calendar-check-o text-primary mr-2"></i>当日收益统计
+          </h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <span class="block text-neutral text-sm mb-1">初始本金</span>
+                <span class="text-xl font-semibold">¥10,000.00</span>
+              </div>
+              <div>
+                <span class="block text-neutral text-sm mb-1">当前总资产</span>
+                <span class="text-xl font-semibold" id="daily-total">¥10,245.30</span>
+              </div>
+            </div>
+            <div class="p-4 bg-apple-light rounded-lg">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium">当日总收益</span>
+                <span class="text-lg font-semibold text-success" id="daily-profit">+¥245.30 (2.45%)</span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-neutral">黄金操作次数</span>
+                  <span id="daily-gold-operations">5次</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutral">白银操作次数</span>
+                  <span id="daily-silver-operations">3次</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutral">盈利操作占比</span>
+                  <span class="text-success" id="daily-profit-rate">62.5%</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <h5 style="font-family:var(--ink-pen);margin:0 0 .5rem;">月度收益</h5>
-          <p style="font-size:1.2rem;font-weight:700;color:var(--accent);">¥13,872.65 (+38.73%)</p>
-        </div>
-      </div>
-    </section>
-  </main>
  
-  <footer>
-    © 2025 聚宝盆贵金属预测技术工作室 · 数据每5分钟速写一次 
-  </footer>
- 
-  <!-- ECharts -->
-  <script src="https://s2.ssl.qhres2.com/!2dd0bbf7/echarts.js"></script> 
-  <script>
-    // 手绘配色 
-    const colors={gold:'#d4af37',silver:'#a8b3c2',ink:'#3c2f1f',accent:'#e76f51',paper:'#fdfcf9'};
-    // 时间 
-    function updateSystemTime(){
-      document.getElementById('system-time').textContent=new  Date().toLocaleString();
-    }
-    setInterval(updateSystemTime,1000);updateSystemTime();
- 
-    // 模拟数据 
-    function generateData(base,count=30){
-      const arr=[];let val=base;
-      for(let i=0;i<count;i++){
-        val+=(Math.random()-0.45)*0.02; 
-        arr.push([Date.now()-(count-i)*300000,val.toFixed(2)]); 
-      }
-      return arr;
-    }
- 
-    // 图表 
-    function drawChart(id,data,color){
-      const chart=echarts.init(document.getElementById(id)); 
-      chart.setOption({ 
-        grid:{left:40,right:20,top:20,bottom:30},
-        xAxis:{type:'time',axisLine:{lineStyle:{color:colors.ink}},axisLabel:{color:colors.ink}}, 
-        yAxis:{type:'value',axisLine:{lineStyle:{color:colors.ink}},axisLabel:{color:colors.ink}}, 
-        series:[{
-          type:'line',
-          data,
-          smooth:true,
-          lineStyle:{color,width:3},
-          areaStyle:{color,opacity:.15}
-        }],
-        tooltip:{trigger:'axis',formatter:params=>`价格：${params[0].value[1]} 元/克`}
-      });
-    }
- 
-    // 历史表格 
-    function fillHistory(){
-      const tbody=document.querySelector('#history-table  tbody');
-      tbody.innerHTML=''; 
-      for(let i=0;i<24;i++){
-        const tr=document.createElement('tr'); 
-        tr.innerHTML=` 
-          <td>${new Date(Date.now()-i*3600000).toLocaleTimeString()}</td> 
-          <td>买入</td>
-          <td style="color:var(--accent)">盈利</td>
-          <td>观望</td>
-          <td style="color:var(--ink)">--</td>
-        `;
-        tbody.appendChild(tr); 
-      }
-    }
- 
-    // 拉取 
-    function fetchData(){
-      const goldData=generateData(772.05);
-      const silverData=generateData(8.78);
-      drawChart('gold-chart',goldData,colors.gold); 
-      drawChart('silver-chart',silverData,colors.silver); 
-      fillHistory();
-    }
- 
-    // 初始化 
-    window.addEventListener('load',()=>{ 
-      fetchData();
-      setInterval(fetchData,300000);
-    });
-  </script>
-</body>
-</html>
-【
+        <!-- 月度收益 -->
+        <div class="p-6 border border-apple-border rounded-xl bg-white">
+          <h3 class="text-lg font-medium mb-4 flex items-center">
+            <i class="fa fa-line-chart text-primary mr-2"></i>月度收益统计
+          </h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <span class="block text-neutral text-sm mb-1">初始本金</span>
+                <span class="text-xl font-semibold">¥10,000.00</span>
+              </div>
+              <div>
+                <span class="block text-neutral text-sm mb-1">当前总资产</span>
+                <span class="text-xl font-semibold" id="monthly-total">¥13,872.65</span>
+              </div>
+            </div>
+            <div class="p-4 bg-apple-light rounded-lg">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium">月度总收益</span>
+                <span class="text-lg font-semibold text-success" id="monthly-profit">+¥3,872.65 (38.73%)</span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-neutral">交易总天数</span>
+                  <span id="monthly-days">22天</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutral">累计操作次数</span>
+                  <span id="monthly-operations">97次</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-neutral">平均日收益率</span>
+                  <span class="text-success" id="monthly-average-rate">1.76%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </
