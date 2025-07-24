@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>接口测试</title>
+</head>
+<body>
+  <h1>聚宝盆贵金属接口测试</h1>
+  <div>
+    <button id="btnFetchCurrent">获取实时黄金价格</button>
+    <pre id="resultCurrent">等待点击按钮...</pre>
+  </div>
+  <div>
+    <button id="btnFetchHistory">获取历史数据</button>
+    <pre id="resultHistory">等待点击按钮...</pre>
+  </div>
+
+  <script>
+    const currentApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/data';
+    const historyApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/history';
+
+    document.getElementById('btnFetchCurrent').addEventListener('click', async () => {
+      const pre = document.getElementById('resultCurrent');
+      pre.textContent = '请求中...';
+      try {
+        const res = await fetch(currentApi, { method: 'GET' });
+        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+        const data = await res.json();
+        pre.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        pre.textContent = `请求失败: ${err.message}`;
+        console.error(err);
+      }
+    });
+
+    document.getElementById('btnFetchHistory').addEventListener('click', async () => {
+      const pre = document.getElementById('resultHistory');
+      pre.textContent = '请求中...';
+      try {
+        const res = await fetch(historyApi, { method: 'GET' });
+        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+        const data = await res.json();
+        pre.textContent = JSON.stringify(data.gold ? data.gold.slice(-5) : data, null, 2);
+      } catch (err) {
+        pre.textContent = `请求失败: ${err.message}`;
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
