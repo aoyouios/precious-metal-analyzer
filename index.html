@@ -1,51 +1,164 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <title>接口测试</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>聚宝盆贵金属预测技术工作室自研系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.3/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
+<style>
+  body { font-family: "Microsoft Yahei", sans-serif; background:#f0f0f0; margin: 0; padding: 20px; }
+  .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); }
+  h1,h2 { color: #333; }
+  .section { margin-bottom: 30px; }
+  #suggestion { font-weight: bold; color: #0071e3; }
+  pre { background: #eee; padding: 10px; border-radius: 4px; max-height: 160px; overflow-y: auto; }
+</style>
 </head>
 <body>
-  <h1>聚宝盆贵金属接口测试</h1>
-  <div>
-    <button id="btnFetchCurrent">获取实时黄金价格</button>
-    <pre id="resultCurrent">等待点击按钮...</pre>
+<div class="container">
+  <h1>聚宝盆贵金属预测技术工作室自研系统</h1>
+  
+  <div class="section">
+    <h2>实时黄金价格</h2>
+    <p><span id="gold-price">加载中...</span> 元/克</p>
   </div>
-  <div>
-    <button id="btnFetchHistory">获取历史数据</button>
-    <pre id="resultHistory">等待点击按钮...</pre>
+  
+  <div class="section">
+    <h2>黄金分时图</h2>
+    <canvas id="goldChart" height="400"></canvas>
   </div>
+  
+  <div class="section">
+    <h2>操作建议</h2>
+    <p id="suggestion">等待数据...</p>
+  </div>
+  
+  <div class="section">
+    <h2>历史记录（最近5条）</h2>
+    <pre id="history">等待加载...</pre>
+  </div>
+  
+  <div class="section">
+    <h2>收益统计</h2>
+    <p id="profit">等待计算...</p>
+  </div>
+</div>
 
-  <script>
-    const currentApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/data';
-    const historyApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/history';
+<script>
+  const API_BASE = 'https://precious-metal-analyzer.aoyouios.workers.dev';
 
-    document.getElementById('btnFetchCurrent').addEventListener('click', async () => {
-      const pre = document.getElementById('resultCurrent');
-      pre.textContent = '请求中...';
-      try {
-        const res = await fetch(currentApi, { method: 'GET' });
-        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
-        const data = await res.json();
-        pre.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        pre.textContent = `请求失败: ${err.message}`;
-        console.error(err);
+  let goldChart = null;
+
+  async function fetchCurrentPrice() {
+    const res = await fetch(`${API_BASE}/data`);
+    if (!res.ok) throw new Error('获取实时价格失败');
+    return res.json();
+  }
+
+  async function fetchHistory() {
+    const res = await fetch(`${API_BASE}/history`);
+    if (!res.ok) throw new Error('获取历史数据失败');
+    const json = await res.json();
+    // 只取黄金部分
+    return json.gold || [];
+  }
+
+  function createOrUpdateChart(data) {
+    const ctx = document.getElementById('goldChart').getContext('2d');
+    const chartData = data.map(item => ({ x: item.t, y: item.c }));
+    if (goldChart) {
+      goldChart.data.datasets[0].data = chartData;
+      goldChart.update();
+    } else {
+      goldChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: '黄金价格',
+            data: chartData,
+            borderColor: '#0071e3',
+            backgroundColor: 'rgba(0, 113, 227, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                tooltipFormat: 'MM/dd HH:mm:ss',
+                displayFormats: { minute: 'HH:mm' }
+              },
+              title: { display: true, text: '时间' }
+            },
+            y: {
+              beginAtZero: false,
+              title: { display: true, text: '价格 (元/克)' }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            intersect: false
+          },
+          plugins: {
+            legend: { display: true }
+          }
+        }
+      });
+    }
+  }
+
+  function calcSuggestion(current, lastClose) {
+    if (current > lastClose) return '建议：当前价格上涨，考虑买入';
+    if (current < lastClose) return '建议：当前价格下跌，建议观望或减仓';
+    return '建议：价格持平，保持观望';
+  }
+
+  function calcProfit(current, openPrice) {
+    const diff = current - openPrice;
+    return `当前收益估算：${diff.toFixed(2)} 元/克`;
+  }
+
+  function formatHistory(history) {
+    return history.slice(-5).map(item => {
+      const time = new Date(item.t).toLocaleString();
+      return `${time}  开盘:${item.o}  最高:${item.h}  最低:${item.l}  收盘:${item.c}`;
+    }).join('\n');
+  }
+
+  async function init() {
+    try {
+      const [current, history] = await Promise.all([fetchCurrentPrice(), fetchHistory()]);
+      document.getElementById('gold-price').textContent = current.gold + ' 元/克';
+
+      if (history.length > 0) {
+        createOrUpdateChart(history);
+        document.getElementById('history').textContent = formatHistory(history);
+
+        const lastClose = history[history.length - 1].c;
+        document.getElementById('suggestion').textContent = calcSuggestion(parseFloat(current.gold), lastClose);
+        document.getElementById('profit').textContent = calcProfit(parseFloat(current.gold), history[0].o);
+      } else {
+        document.getElementById('history').textContent = '无历史数据';
+        document.getElementById('suggestion').textContent = '无法生成建议，缺少历史数据';
+        document.getElementById('profit').textContent = '无法计算收益，缺少历史数据';
       }
-    });
+    } catch (error) {
+      document.getElementById('gold-price').textContent = '加载失败';
+      document.getElementById('history').textContent = '加载失败';
+      document.getElementById('suggestion').textContent = '数据获取失败';
+      document.getElementById('profit').textContent = '收益计算失败';
+      console.error(error);
+    }
+  }
 
-    document.getElementById('btnFetchHistory').addEventListener('click', async () => {
-      const pre = document.getElementById('resultHistory');
-      pre.textContent = '请求中...';
-      try {
-        const res = await fetch(historyApi, { method: 'GET' });
-        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
-        const data = await res.json();
-        pre.textContent = JSON.stringify(data.gold ? data.gold.slice(-5) : data, null, 2);
-      } catch (err) {
-        pre.textContent = `请求失败: ${err.message}`;
-        console.error(err);
-      }
-    });
-  </script>
+  window.onload = init;
+</script>
 </body>
 </html>
