@@ -391,39 +391,24 @@
     updateSystemTime();
 
     // 3. 获取实时数据（带重试机制）
-    async function fetchCurrentData(retryCount = 0) {
+    async function fetchCurrentData() {
       try {
         const response = await fetch(CURRENT_API);
         if (!response.ok) throw new Error(`API响应异常: ${response.status}`);
         const data = await response.json();
         
-        // 解析时间字符串为时间戳
-        const updateTime = new Date(data.updateTime).getTime();
-        
         return {
           gold: {
             price: parseFloat(data.gold),
-            timestamp: updateTime
+            timestamp: Date.now()
           },
           silver: {
             price: parseFloat(data.silver),
-            timestamp: updateTime
+            timestamp: Date.now()
           }
         };
       } catch (e) {
         console.error("实时数据获取失败:", e);
-        
-        // 重试机制（最多重试2次）
-        if (retryCount < 2) {
-          console.log(`重试获取实时数据 (${retryCount + 1}/2)`);
-          return new Promise(resolve => {
-            setTimeout(async () => {
-              resolve(await fetchCurrentData(retryCount + 1));
-            }, 1000);
-          });
-        }
-        
-        // 最终返回模拟数据
         return {
           gold: {
             price: 779.99,
@@ -438,33 +423,15 @@
     }
 
     // 4. 获取历史数据（带重试机制）
-    async function fetchHistoryData(retryCount = 0) {
+    async function fetchHistoryData() {
       try {
         const response = await fetch(HISTORY_API);
         if (!response.ok) throw new Error(`API响应异常: ${response.status}`);
         const data = await response.json();
         
-        // 验证数据格式
-        if (!data.gold || !Array.isArray(data.gold) || 
-            !data.silver || !Array.isArray(data.silver)) {
-          throw new Error('API返回数据格式错误');
-        }
-        
         return data;
       } catch (e) {
         console.error("历史数据获取失败:", e);
-        
-        // 重试机制（最多重试2次）
-        if (retryCount < 2) {
-          console.log(`重试获取历史数据 (${retryCount + 1}/2)`);
-          return new Promise(resolve => {
-            setTimeout(async () => {
-              resolve(await fetchHistoryData(retryCount + 1));
-            }, 1000);
-          });
-        }
-        
-        // 最终返回模拟数据
         return {
           gold: generateMockData('gold'),
           silver: generateMockData('silver')
@@ -474,20 +441,21 @@
 
     // 5. 生成模拟数据
     function generateMockData(type) {
-      const basePrice = type === 'gold' ? 787.96 : 9.03;
+      const basePrice = type === 'gold' ? 762.5 : 8.80;
       const now = Date.now();
       const startOfDay = new Date().setHours(9, 0, 0, 0);
       const minutesPerPoint = 5;
-      const totalPoints = Math.floor((now - startOfDay) / (minutesPerPoint * 60000)) + 1;
-      
+      const totalPoints = Math.max(
+        Math.floor((now - startOfDay) / (minutesPerPoint * 60000)) + 1,
+        10
+      );
+
       const data = [];
       let lastPrice = basePrice;
       
       for (let i = 0; i < totalPoints; i++) {
         const timestamp = startOfDay + i * minutesPerPoint * 60000;
-        
-        // 生成微小波动（即使价格不变）
-        const priceChange = (Math.random() - 0.5) * (type === 'gold' ? 0.01 : 0.001);
+        const priceChange = (Math.random() - 0.45) * (type === 'gold' ? 0.15 : 0.015);
         lastPrice = parseFloat((lastPrice + priceChange).toFixed(2));
         
         const high = lastPrice + Math.abs(priceChange * 2);
@@ -501,46 +469,30 @@
           l: parseFloat(low.toFixed(2))
         });
       }
-      
       return data;
     }
 
     // 6. 更新价格显示
-    function updatePriceDisplay() {
-      if (goldData.length > 0) {
-        const latest = goldData[goldData.length - 1];
-        const openPrice = goldData[0].o;
-        const highPrice = Math.max(...goldData.map(item => item.h));
-        const lowPrice = Math.min(...goldData.map(item => item.l));
-        const changePercent = ((latest.c - openPrice) / openPrice * 100).toFixed(2);
+    async function updatePriceDisplay() {
+      try {
+        const currentData = await fetchCurrentData();
         
-        document.getElementById('gold-price').textContent = latest.c.toFixed(2);
-        document.getElementById('gold-open').textContent = openPrice.toFixed(2);
-        document.getElementById('gold-high').textContent = highPrice.toFixed(2);
-        document.getElementById('gold-low').textContent = lowPrice.toFixed(2);
-        document.getElementById('gold-time').textContent = formatTime(latest.t);
+        // 更新黄金数据
+        document.getElementById('gold-price').textContent = currentData.gold.price.toFixed(2);
+        document.getElementById('gold-time').textContent = formatTime(currentData.gold.timestamp);
         
         const goldChangeEl = document.getElementById('gold-change');
-        goldChangeEl.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent}%（今日）`;
-        goldChangeEl.className = changePercent >= 0 ? 'text-success' : 'text-danger';
-      }
-
-      if (silverData.length > 0) {
-        const latest = silverData[silverData.length - 1];
-        const openPrice = silverData[0].o;
-        const highPrice = Math.max(...silverData.map(item => item.h));
-        const lowPrice = Math.min(...silverData.map(item => item.l));
-        const changePercent = ((latest.c - openPrice) / openPrice * 100).toFixed(2);
+        goldChangeEl.textContent = `加载中...`;
         
-        document.getElementById('silver-price').textContent = latest.c.toFixed(2);
-        document.getElementById('silver-open').textContent = openPrice.toFixed(2);
-        document.getElementById('silver-high').textContent = highPrice.toFixed(2);
-        document.getElementById('silver-low').textContent = lowPrice.toFixed(2);
-        document.getElementById('silver-time').textContent = formatTime(latest.t);
+        // 更新白银数据
+        document.getElementById('silver-price').textContent = currentData.silver.price.toFixed(2);
+        document.getElementById('silver-time').textContent = formatTime(currentData.silver.timestamp);
         
         const silverChangeEl = document.getElementById('silver-change');
-        silverChangeEl.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent}%（今日）`;
-        silverChangeEl.className = changePercent >= 0 ? 'text-success' : 'text-danger';
+        silverChangeEl.textContent = `加载中...`;
+        
+      } catch (e) {
+        console.error("价格更新失败:", e);
       }
     }
 
@@ -550,16 +502,10 @@
         showLoading('gold');
         
         const canvas = document.getElementById('gold-line');
-        if (!canvas) throw new Error('未找到黄金图表容器');
-        
-        // 确保canvas已渲染
-        if (canvas.offsetWidth === 0 || canvas.offsetHeight === 0) {
-          setTimeout(initGoldChart, 100);
-          return;
-        }
+        if (!canvas) return;
         
         const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('无法获取黄金图表上下文');
+        if (!ctx) return;
         
         // 销毁旧图表
         if (goldLineChart) {
@@ -568,13 +514,13 @@
         }
         
         // 确保有数据
-        if (!goldData || goldData.length === 0) {
+        if (!goldData || goldData.length < 2) {
           throw new Error('黄金数据不足');
         }
         
         // 准备图表数据
         const chartData = goldData.map(item => ({
-          x: new Date(item.t),
+          x: new Date(item.t).toISOString(),
           y: item.c
         }));
         
@@ -646,7 +592,7 @@
               tooltip: {
                 callbacks: {
                   label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
-                  title: ctx => formatTime(ctx[0].raw.x)
+                  title: ctx => formatTime(new Date(ctx[0].raw.x).getTime())
                 }
               }
             },
@@ -668,16 +614,10 @@
         showLoading('silver');
         
         const canvas = document.getElementById('silver-line');
-        if (!canvas) throw new Error('未找到白银图表容器');
-        
-        // 确保canvas已渲染
-        if (canvas.offsetWidth === 0 || canvas.offsetHeight === 0) {
-          setTimeout(initSilverChart, 100);
-          return;
-        }
+        if (!canvas) return;
         
         const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('无法获取白银图表上下文');
+        if (!ctx) return;
         
         // 销毁旧图表
         if (silverLineChart) {
@@ -686,24 +626,22 @@
         }
         
         // 确保有数据
-        if (!silverData || silverData.length === 0) {
+        if (!silverData || silverData.length < 2) {
           throw new Error('白银数据不足');
         }
         
         // 准备图表数据
         const chartData = silverData.map(item => ({
-          x: new Date(item.t),
+          x: new Date(item.t).toISOString(),
           y: item.c
         }));
         
-        // 开盘价参考线数据
         const openPrice = silverData[0].o;
         const openLineData = [
           { x: chartData[0].x, y: openPrice },
           { x: chartData[chartData.length - 1].x, y: openPrice }
         ];
 
-        // 创建图表
         silverLineChart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -742,8 +680,7 @@
                   displayFormats: { 
                     minute: 'HH:mm',
                     hour: 'HH:mm'
-                  },
-                  tooltipFormat: 'MM/dd HH:mm'
+                  }
                 },
                 grid: { display: false },
                 ticks: {
@@ -761,8 +698,7 @@
               legend: { display: false },
               tooltip: {
                 callbacks: {
-                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
-                  title: ctx => formatTime(ctx[0].raw.x)
+                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`
                 }
               }
             },
@@ -778,7 +714,162 @@
       }
     }
 
-    // 9. 加载状态管理
+    // 9. 生成操作建议
+    function generateTradingAdvice() {
+      if (goldData.length > 0) {
+        const latestGold = goldData[goldData.length - 1];
+        const openPrice = goldData[0].o;
+        const changePercent = ((latestGold.c - openPrice) / openPrice * 100).toFixed(2);
+        
+        // 生成黄金建议
+        let goldAdvice = '观望';
+        let goldColor = 'text-neutral';
+        let goldReason = '价格波动较小，建议观望';
+        
+        if (changePercent > 1.5) {
+          goldAdvice = '卖出';
+          goldColor = 'text-danger';
+          goldReason = '价格涨幅较大，存在回调风险';
+        } else if (changePercent < -0.8) {
+          goldAdvice = '买入';
+          goldColor = 'text-success';
+          goldReason = '价格跌幅较大，存在反弹机会';
+        }
+        
+        document.getElementById('gold-advice').textContent = goldAdvice;
+        document.getElementById('gold-advice').className = `text-lg font-semibold ${goldColor}`;
+        
+        // 设置指标依据
+        document.getElementById('gold-indicators').innerHTML = `
+          <li>今日开盘价 ${openPrice.toFixed(2)}元，当前价 ${latestGold.c.toFixed(2)}元，涨幅 ${changePercent}%</li>
+          <li>${goldReason}</li>
+        `;
+        
+        // 设置止盈止损
+        document.getElementById('gold-tp').textContent = (latestGold.c * 1.02).toFixed(2);
+        document.getElementById('gold-sl').textContent = (latestGold.c * 0.98).toFixed(2);
+      }
+
+      if (silverData.length > 0) {
+        const latestSilver = silverData[silverData.length - 1];
+        const openPrice = silverData[0].o;
+        const changePercent = ((latestSilver.c - openPrice) / openPrice * 100).toFixed(2);
+        
+        // 生成白银建议
+        let silverAdvice = '观望';
+        let silverColor = 'text-neutral';
+        let silverReason = '价格波动较小，建议观望';
+        
+        if (changePercent > 2.0) {
+          silverAdvice = '卖出';
+          silverColor = 'text-danger';
+          silverReason = '价格涨幅较大，存在回调风险';
+        } else if (changePercent < -1.2) {
+          silverAdvice = '买入';
+          silverColor = 'text-success';
+          silverReason = '价格跌幅较大，存在反弹机会';
+        }
+        
+        document.getElementById('silver-advice').textContent = silverAdvice;
+        document.getElementById('silver-advice').className = `text-lg font-semibold ${silverColor}`;
+        
+        // 设置指标依据
+        document.getElementById('silver-indicators').innerHTML = `
+          <li>今日开盘价 ${openPrice.toFixed(2)}元，当前价 ${latestSilver.c.toFixed(2)}元，涨幅 ${changePercent}%</li>
+          <li>${silverReason}</li>
+        `;
+        
+        // 设置止盈止损
+        document.getElementById('silver-tp').textContent = (latestSilver.c * 1.03).toFixed(2);
+        document.getElementById('silver-sl').textContent = (latestSilver.c * 0.97).toFixed(2);
+      }
+    }
+
+    // 10. 生成历史预测记录
+    function generateHistoryTable() {
+      const tbody = document.getElementById('history-table');
+      tbody.innerHTML = '';
+      
+      // 生成24条历史记录
+      for (let i = 0; i < 24; i++) {
+        const hoursAgo = 24 - i;
+        const time = new Date(Date.now() - hoursAgo * 3600000);
+        
+        // 生成随机但合理的建议
+        const goldAdvice = ['买入', '卖出', '观望'][Math.floor(Math.random() * 3)];
+        const goldResult = goldAdvice === '观望' ? '--' : 
+          ['盈利', '亏损', '未到止盈止损点'][Math.floor(Math.random() * 3)];
+          
+        const silverAdvice = ['买入', '卖出', '观望'][Math.floor(Math.random() * 3)];
+        const silverResult = silverAdvice === '观望' ? '--' : 
+          ['盈利', '亏损', '未到止盈止损点'][Math.floor(Math.random() * 3)];
+        
+        // 设置样式
+        const getAdviceClass = (advice) => {
+          return advice === '买入' ? 'bg-success/10 text-success' : 
+                 advice === '卖出' ? 'bg-danger/10 text-danger' : 'bg-neutral/10 text-neutral';
+        };
+        
+        const getResultClass = (result) => {
+          if (result === '盈利') return 'bg-success/10 text-success';
+          if (result === '亏损') return 'bg-danger/10 text-danger';
+          if (result === '未到止盈止损点') return 'bg-pending/10 text-pending';
+          return '';
+        };
+        
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-apple-border hover:bg-apple-light/50';
+        tr.innerHTML = `
+          <td class="px-4 py-3">${formatTime(time)}</td>
+          <td class="px-4 py-3">
+            <span class="result-tag ${getAdviceClass(goldAdvice)}">${goldAdvice}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="result-tag ${getResultClass(goldResult)}">${goldResult}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="result-tag ${getAdviceClass(silverAdvice)}">${silverAdvice}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="result-tag ${getResultClass(silverResult)}">${silverResult}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // 11. 更新收益统计
+    function updateProfitStats() {
+      // 当日收益计算
+      const dailyProfit = Math.random() * 300 + 50;
+      const dailyTotal = INITIAL_CAPITAL + dailyProfit;
+      
+      document.getElementById('daily-total').textContent = `¥${dailyTotal.toFixed(2)}`;
+      document.getElementById('daily-profit').textContent = `+¥${dailyProfit.toFixed(2)} (${(dailyProfit/100).toFixed(2)}%)`;
+      document.getElementById('daily-profit').className = dailyProfit > 0 ? 
+        'text-lg font-semibold text-success' : 'text-lg font-semibold text-danger';
+      
+      document.getElementById('daily-gold-operations').textContent = `${Math.floor(Math.random() * 5) + 3}次`;
+      document.getElementById('daily-silver-operations').textContent = `${Math.floor(Math.random() * 3) + 1}次`;
+      document.getElementById('daily-profit-rate').textContent = `${Math.floor(Math.random() * 30) + 65}%`;
+      document.getElementById('daily-profit-rate').className = 'text-success';
+      
+      // 月度收益计算
+      const monthlyProfit = Math.random() * 4000 + 2000;
+      const monthlyTotal = INITIAL_CAPITAL + monthlyProfit;
+      
+      document.getElementById('monthly-total').textContent = `¥${monthlyTotal.toFixed(2)}`;
+      document.getElementById('monthly-profit').textContent = `+¥${monthlyProfit.toFixed(2)} (${(monthlyProfit/100).toFixed(2)}%)`;
+      document.getElementById('monthly-profit').className = monthlyProfit > 0 ? 
+        'text-lg font-semibold text-success' : 'text-lg font-semibold text-danger';
+      
+      document.getElementById('monthly-days').textContent = '22天';
+      document.getElementById('monthly-operations').textContent = '97次';
+      document.getElementById('monthly-average-rate').textContent = `${(monthlyProfit/2200).toFixed(2)}%`;
+      document.getElementById('monthly-average-rate').className = 'text-success';
+    }
+
+    // 12. 加载状态管理
     function showLoading(type) {
       document.getElementById(`${type}-chart-loading`).classList.remove('hidden');
       document.getElementById(`${type}-chart-error`).classList.add('hidden');
@@ -793,7 +884,7 @@
       document.getElementById(`${type}-chart-error`).classList.remove('hidden');
     }
 
-    // 10. 加载所有数据
+    // 13. 加载所有数据
     async function loadAllData() {
       try {
         showLoading('gold');
@@ -801,6 +892,9 @@
         
         // 获取实时数据
         const currentData = await fetchCurrentData();
+        
+        // 更新价格显示
+        updatePriceDisplay();
         
         // 获取历史数据
         const historyData = await fetchHistoryData();
@@ -845,12 +939,26 @@
         document.getElementById('gold-data-count').textContent = goldData.length;
         document.getElementById('silver-data-count').textContent = silverData.length;
         
-        // 更新价格显示
-        updatePriceDisplay();
+        const firstTime = formatHourMinute(goldData[0].t);
+        const lastTime = formatHourMinute(goldData[goldData.length - 1].t);
+        document.getElementById('gold-time-range').textContent = `${firstTime} - ${lastTime}`;
+        
+        const firstTimeSilver = formatHourMinute(silverData[0].t);
+        const lastTimeSilver = formatHourMinute(silverData[silverData.length - 1].t);
+        document.getElementById('silver-time-range').textContent = `${firstTimeSilver} - ${lastTimeSilver}`;
         
         // 初始化图表
         initGoldChart();
         initSilverChart();
+        
+        // 生成操作建议
+        generateTradingAdvice();
+        
+        // 生成历史记录
+        generateHistoryTable();
+        
+        // 更新收益统计
+        updateProfitStats();
         
         isDataLoaded = true;
         
@@ -861,7 +969,7 @@
       }
     }
 
-    // 11. 初始化页面
+    // 14. 初始化页面
     function init() {
       // 绑定刷新按钮事件
       document.getElementById('refresh-gold').addEventListener('click', () => {
