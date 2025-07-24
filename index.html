@@ -1,68 +1,261 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>聚宝盆贵金属预测技术工作室自研系统</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>聚宝盆贵金属预测系统</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+  <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
-    .container { max-width: 1200px; margin: auto; padding: 2rem; }
-    .card { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-    h1, h2 { font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { padding: 0.75rem; text-align: center; border-bottom: 1px solid #eee; }
-    th { background: #f1f3f5; }
-    .profit { color: #007aff; font-weight: 600; }
-    .red { color: red; }
-    .blue { color: blue; }
-    .green { color: green; }
-    .black { color: black; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background-color: #f9f9f9;
+      color: #1a1a1a;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #0071e3;
+    }
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    .chart-box {
+      position: relative;
+      height: 300px;
+    }
+    table th, table td {
+      padding: 6px 10px;
+    }
+    table thead {
+      background-color: #f2f2f2;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>聚宝盆贵金属预测系统</h1>
-    <div class="card">
-      <h2>操作建议（按短中长期）</h2>
-      <table id="strategy-table">
-        <thead><tr><th>周期</th><th>品种</th><th>时间</th><th>方向</th><th>入场</th><th>止盈</th><th>止损</th><th>依据</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="card">
-      <h2>24小时内预测记录</h2>
-      <table id="record-table">
-        <thead><tr><th>时间</th><th>品种</th><th>方向</th><th>入场</th><th>止盈</th><th>止损</th><th>结果</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="card">
-      <h2>收益统计</h2>
-      <div id="profit-stats" class="profit">加载中...</div>
+
+  <h1>聚宝盆贵金属预测系统</h1>
+
+  <!-- 实时价格 -->
+  <div class="card">
+    <h2 class="text-lg font-semibold">实时黄金 / 白银价格</h2>
+    <div id="realtime" class="grid grid-cols-2 gap-4 mt-2 text-gray-700 text-sm">
+      <div>
+        <strong>黄金：</strong> <span id="gold-price">加载中...</span>
+      </div>
+      <div>
+        <strong>白银：</strong> <span id="silver-price">加载中...</span>
+      </div>
     </div>
   </div>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const strategyTable = document.querySelector("#strategy-table tbody");
-      const recordTable = document.querySelector("#record-table tbody");
-      const profitStats = document.querySelector("#profit-stats");
 
-      strategyTable.innerHTML = `
-        <tr><td>短期</td><td>黄金</td><td>10:00</td><td>买入</td><td>785</td><td>795</td><td>780</td><td>MACD/RSI/布林</td></tr>
-        <tr><td>中期</td><td>白银</td><td>07-24</td><td>持有</td><td>8.85</td><td>9.05</td><td>8.75</td><td>RSI</td></tr>
-        <tr><td>长期</td><td>黄金</td><td>07-01</td><td>买入</td><td>770</td><td>820</td><td>750</td><td>布林带突破</td></tr>`;
+  <!-- 图表 -->
+  <div class="card">
+    <h2 class="text-lg font-semibold">图表分析</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+      <div>
+        <h3 class="text-sm text-gray-600 mb-1">黄金价格</h3>
+        <canvas id="gold-line" class="chart-box"></canvas>
+      </div>
+      <div>
+        <h3 class="text-sm text-gray-600 mb-1">白银价格</h3>
+        <canvas id="silver-line" class="chart-box"></canvas>
+      </div>
+    </div>
+  </div>
 
-      recordTable.innerHTML = "";
-      for (let i = 0; i < 24; i++) {
-        const resultClass = ["red", "blue", "green", "black"][i % 4];
-        recordTable.innerHTML += `<tr>
-          <td>${9 + i}:00</td><td>${i % 2 === 0 ? "黄金" : "白银"}</td><td>${i % 2 === 0 ? "买入" : "卖出"}</td>
-          <td>${(785 + i).toFixed(2)}</td><td>${(790 + i).toFixed(2)}</td><td>${(780 + i).toFixed(2)}</td>
-          <td class="${resultClass}">${["止盈", "方向正确", "止损", "等待"][i % 4]}</td></tr>`;
+  <!-- 操作建议 -->
+  <div class="card">
+    <h2 class="text-lg font-semibold">操作建议</h2>
+    <div id="suggestion" class="overflow-auto text-sm mt-2 text-gray-700">生成中...</div>
+  </div>
+
+  <!-- 预测记录 -->
+  <div class="card">
+    <h2 class="text-lg font-semibold">24小时预测记录</h2>
+    <div id="history" class="overflow-auto text-sm mt-2 text-gray-700">加载中...</div>
+  </div>
+
+  <!-- 收益统计 -->
+  <div class="card">
+    <h2 class="text-lg font-semibold">短期建议跟随收益统计</h2>
+    <div id="profit" class="text-base mt-2 text-blue-600">加载中...</div>
+  </div>
+
+<script>
+async function fetchData() {
+  try {
+    const res = await fetch('https://precious-metal-analyzer.aoyouios.workers.dev/data');
+    const data = await res.json();
+    document.getElementById('gold-price').textContent = `${data.gold.current.toFixed(2)} 元/克`;
+    document.getElementById('silver-price').textContent = `${data.silver.current.toFixed(2)} 元/克`;
+
+    const hRes = await fetch('https://precious-metal-analyzer.aoyouios.workers.dev/history');
+    return await hRes.json();
+  } catch (err) {
+    console.error('请求失败:', err);
+    document.getElementById('gold-price').textContent = '加载失败';
+    document.getElementById('silver-price').textContent = '加载失败';
+    return null;
+  }
+}
+
+function renderLineChart(id, label, color, data) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(i => new Date(i.t).toLocaleTimeString()),
+      datasets: [{
+        label,
+        data: data.map(i => i.c),
+        borderColor: color,
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        zoom: {
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+          pan: { enabled: true, mode: 'x' }
+        }
+      },
+      scales: {
+        x: { ticks: { autoSkip: true }, display: true },
+        y: { beginAtZero: false }
       }
+    }
+  });
+}
 
-      profitStats.innerText = "假设本金 10000 元，完全跟随短期建议，今日盈利 260 元，本月累计盈利 1640 元。";
-    });
-  </script>
+function std(arr) {
+  const mean = arr.reduce((a, b) => a + b) / arr.length;
+  return Math.sqrt(arr.map(x => (x - mean) ** 2).reduce((a, b) => a + b) / arr.length);
+}
+
+function renderSuggestions(goldData, silverData) {
+  const now = new Date();
+  const hour = now.getHours();
+  const timeStr = `${now.getMonth() + 1}月${now.getDate()}日 ${hour}:00`;
+
+  const suggestionBox = document.getElementById('suggestion');
+  const historyBox = document.getElementById('history');
+  const profitBox = document.getElementById('profit');
+
+  function indicators(data) {
+    const closes = data.map(i => i.c);
+    const avg = closes.reduce((a, b) => a + b) / closes.length;
+    const last = closes[closes.length - 1];
+    const vol = data[data.length - 1].v || 0;
+    const macd = last - avg;
+    const rsi = 100 - (100 / (1 + (closes.slice(-14).reduce((a, b) => a + b) / 14) / avg));
+    const bbUpper = avg + 2 * std(closes);
+    const bbLower = avg - 2 * std(closes);
+    return { macd, rsi, bbUpper, bbLower, avg, vol };
+  }
+
+  function generateAdvice(metal, indicators) {
+    let advice = '观望';
+    const { macd, rsi, vol, avg } = indicators;
+    if (macd > 0 && rsi > 50 && vol > 0) advice = '买入';
+    else if (macd < 0 && rsi < 50) advice = '卖出';
+    return {
+      metal,
+      direction: advice,
+      price: parseFloat(metal === '黄金' ? goldData[goldData.length - 1].c : silverData[silverData.length - 1].c).toFixed(2),
+      stopProfit: (avg * 1.015).toFixed(2),
+      stopLoss: (avg * 0.985).toFixed(2),
+      time: timeStr,
+      reason: `MACD=${macd.toFixed(2)}，RSI=${rsi.toFixed(2)}，VOL=${vol}`
+    };
+  }
+
+  const goldAdvice = generateAdvice('黄金', indicators(goldData));
+  const silverAdvice = generateAdvice('白银', indicators(silverData));
+
+  const renderRow = ({ metal, direction, price, stopProfit, stopLoss, time, reason }) =>
+    `<tr>
+      <td>短期</td><td>${metal}</td><td>${time}</td><td>${direction}</td>
+      <td>${price}</td><td>${stopProfit}</td><td>${stopLoss}</td><td>${reason}</td>
+    </tr>`;
+
+  suggestionBox.innerHTML = `
+    <table class="w-full text-sm text-left">
+      <thead><tr><th>周期</th><th>品种</th><th>时间</th><th>方向</th><th>入场</th><th>止盈</th><th>止损</th><th>依据</th></tr></thead>
+      <tbody>${renderRow(goldAdvice)}${renderRow(silverAdvice)}</tbody>
+    </table>`;
+
+  const pastRecords = JSON.parse(localStorage.getItem('past24') || '[]');
+  pastRecords.unshift({ time: goldAdvice.time, metal: '黄金', ...goldAdvice });
+  pastRecords.unshift({ time: silverAdvice.time, metal: '白银', ...silverAdvice });
+  const last24 = pastRecords.slice(0, 24);
+  localStorage.setItem('past24', JSON.stringify(last24));
+
+  historyBox.innerHTML = `
+    <table class="w-full text-sm text-left">
+      <thead><tr><th>时间</th><th>品种</th><th>方向</th><th>入场</th><th>止盈</th><th>止损</th><th>结果</th></tr></thead>
+      <tbody>
+        ${last24.map(row => {
+          let color = 'black';
+          const price = parseFloat(row.price);
+          const profit = parseFloat(row.stopProfit);
+          const loss = parseFloat(row.stopLoss);
+          const lastPrice = row.metal === '黄金' ? goldData[goldData.length - 1].c : silverData[silverData.length - 1].c;
+          if (row.direction === '买入') {
+            if (lastPrice >= profit) color = 'red';
+            else if (lastPrice <= loss) color = 'green';
+            else if (lastPrice > price) color = 'blue';
+          } else if (row.direction === '卖出') {
+            if (lastPrice <= profit) color = 'red';
+            else if (lastPrice >= loss) color = 'green';
+            else if (lastPrice < price) color = 'blue';
+          }
+          return `<tr class="text-${color}-600">
+            <td>${row.time}</td><td>${row.metal}</td><td>${row.direction}</td>
+            <td>${row.price}</td><td>${row.stopProfit}</td><td>${row.stopLoss}</td><td>${color}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  // 收益统计
+  let balance = 10000;
+  last24.forEach(row => {
+    if (row.direction === '观望') return;
+    const entry = parseFloat(row.price);
+    const exit = row.direction === '买入'
+      ? Math.min(parseFloat(row.stopProfit), goldData[goldData.length - 1].c)
+      : Math.max(parseFloat(row.stopLoss), goldData[goldData.length - 1].c);
+    const profit = row.direction === '买入'
+      ? (exit - entry)
+      : (entry - exit);
+    balance += profit * 10;
+  });
+  const netProfit = (balance - 10000).toFixed(2);
+  profitBox.innerHTML = `假设本金 10000 元，完全跟随短期建议交易，总收益：<span class="text-blue-600 font-bold">${netProfit} 元</span>`;
+}
+
+window.addEventListener('load', async () => {
+  const data = await fetchData();
+  if (data && data.historyGold && data.historySilver) {
+    renderLineChart('gold-line', '黄金价格', '#0071e3', data.historyGold);
+    renderLineChart('silver-line', '白银价格', '#a48f13', data.historySilver);
+    renderSuggestions(data.historyGold, data.historySilver);
+  }
+});
+</script>
 </body>
 </html>
