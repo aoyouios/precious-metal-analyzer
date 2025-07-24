@@ -3,162 +3,459 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>聚宝盆贵金属预测技术工作室自研系统</title>
+<title>聚宝盆贵金属分析系统 - 实时行情与智能分析</title>
+
+<!-- TailwindCSS for responsive UI -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Chart.js + Luxon + Adapter -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.3/build/global/luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
+
 <style>
-  body { font-family: "Microsoft Yahei", sans-serif; background:#f0f0f0; margin: 0; padding: 20px; }
-  .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); }
-  h1,h2 { color: #333; }
-  .section { margin-bottom: 30px; }
-  #suggestion { font-weight: bold; color: #0071e3; }
-  pre { background: #eee; padding: 10px; border-radius: 4px; max-height: 160px; overflow-y: auto; }
+  /* K线颜色 */
+  .candle-up { color: #16a34a; }
+  .candle-down { color: #dc2626; }
+  .suggestion-profit { color: #16a34a; font-weight: 600; }
+  .suggestion-loss { color: #dc2626; font-weight: 600; }
+  .suggestion-neutral { color: #3b82f6; font-weight: 600; }
+  table th, table td { border: 1px solid #ccc; }
+  table th { background: #f3f4f6; }
 </style>
 </head>
-<body>
-<div class="container">
-  <h1>聚宝盆贵金属预测技术工作室自研系统</h1>
-  
-  <div class="section">
-    <h2>实时黄金价格</h2>
-    <p><span id="gold-price">加载中...</span> 元/克</p>
-  </div>
-  
-  <div class="section">
-    <h2>黄金分时图</h2>
-    <canvas id="goldChart" height="400"></canvas>
-  </div>
-  
-  <div class="section">
-    <h2>操作建议</h2>
-    <p id="suggestion">等待数据...</p>
-  </div>
-  
-  <div class="section">
-    <h2>历史记录（最近5条）</h2>
-    <pre id="history">等待加载...</pre>
-  </div>
-  
-  <div class="section">
-    <h2>收益统计</h2>
-    <p id="profit">等待计算...</p>
-  </div>
+<body class="bg-gray-100 min-h-screen p-4">
+
+<div class="max-w-7xl mx-auto">
+
+  <h1 class="text-3xl font-bold mb-6 text-center">聚宝盆贵金属预测技术工作室自研系统</h1>
+
+  <!-- 实时行情 -->
+  <section class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="text-xl font-semibold mb-4">实时行情</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 黄金 -->
+      <div>
+        <h3 class="font-semibold mb-2">黄金 (元/克)</h3>
+        <p>当前价格：<span id="gold-price" class="text-lg font-bold">加载中...</span></p>
+        <p>更新时间：<span id="gold-update">-</span></p>
+        <p>开盘价：<span id="gold-open">-</span></p>
+        <p>最高价：<span id="gold-high">-</span></p>
+        <p>最低价：<span id="gold-low">-</span></p>
+      </div>
+      <!-- 白银 -->
+      <div>
+        <h3 class="font-semibold mb-2">白银 (元/克)</h3>
+        <p>当前价格：<span id="silver-price" class="text-lg font-bold">加载中...</span></p>
+        <p>更新时间：<span id="silver-update">-</span></p>
+        <p>开盘价：<span id="silver-open">-</span></p>
+        <p>最高价：<span id="silver-high">-</span></p>
+        <p>最低价：<span id="silver-low">-</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 图表区 -->
+  <section class="bg-white p-4 rounded shadow mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <h2 class="text-xl font-semibold mb-3">黄金分时线图</h2>
+      <canvas id="gold-line-chart" height="300"></canvas>
+    </div>
+    <div>
+      <h2 class="text-xl font-semibold mb-3">黄金K线图 & 技术指标</h2>
+      <canvas id="gold-candle-chart" height="300"></canvas>
+      <div id="tech-indicators" class="mt-3 text-gray-700 font-medium"></div>
+    </div>
+  </section>
+
+  <!-- 智能操作建议 -->
+  <section class="bg-white p-4 rounded shadow mb-6 overflow-auto">
+    <h2 class="text-xl font-semibold mb-3">智能操作建议</h2>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr>
+          <th class="p-2">周期</th>
+          <th class="p-2">方向</th>
+          <th class="p-2">入场点</th>
+          <th class="p-2">止盈点</th>
+          <th class="p-2">止损点</th>
+          <th class="p-2">依据</th>
+          <th class="p-2">状态</th>
+        </tr>
+      </thead>
+      <tbody id="advice-table-body">
+        <tr><td colspan="7" class="p-4 text-center text-gray-500">等待数据加载...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 历史建议验证 -->
+  <section class="bg-white p-4 rounded shadow mb-6 overflow-auto" style="max-height: 240px;">
+    <h2 class="text-xl font-semibold mb-3">历史建议（24小时内）</h2>
+    <div id="history-advice" class="text-sm"></div>
+  </section>
+
+  <!-- 收益统计 -->
+  <section class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="text-xl font-semibold mb-3">收益统计</h2>
+    <p id="profit-stats" class="text-lg font-semibold text-center">等待计算...</p>
+  </section>
 </div>
 
 <script>
   const API_BASE = 'https://precious-metal-analyzer.aoyouios.workers.dev';
 
-  let goldChart = null;
+  let goldLineChart = null;
+  let goldCandleChart = null;
 
-  async function fetchCurrentPrice() {
-    const res = await fetch(`${API_BASE}/data`);
-    if (!res.ok) throw new Error('获取实时价格失败');
-    return res.json();
+  // 1. 格式化时间为本地字符串
+  function formatDate(ts) {
+    return new Date(ts).toLocaleString();
   }
 
-  async function fetchHistory() {
-    const res = await fetch(`${API_BASE}/history`);
-    if (!res.ok) throw new Error('获取历史数据失败');
-    const json = await res.json();
-    // 只取黄金部分
-    return json.gold || [];
+  // 2. 计算技术指标 (MACD, RSI, Bollinger Bands) - 简化版示范
+  // 真实计算请用专业库或后端生成后传入
+  function calcIndicators(data) {
+    if (data.length < 20) return { MACD: '数据不足', RSI: '数据不足', Bollinger: '数据不足' };
+
+    // 简单MACD示例：取最后5个close均值和前5个均值对比判断涨跌
+    const closes = data.map(d => d.c);
+    const shortAvg = closes.slice(-5).reduce((a,b) => a+b, 0)/5;
+    const longAvg = closes.slice(-20, -15).reduce((a,b) => a+b, 0)/5;
+    const MACD = shortAvg > longAvg ? '转正' : '转负';
+
+    // 简单RSI示例：计算过去14周期的上涨率和下跌率比值
+    let gains = 0, losses = 0;
+    for(let i = data.length-14; i < data.length -1; i++) {
+      const diff = data[i+1].c - data[i].c;
+      if(diff > 0) gains += diff; else losses -= diff;
+    }
+    const RS = losses === 0 ? 100 : gains / losses;
+    const RSI = (100 - (100 / (1 + RS))).toFixed(1);
+
+    // 简单布林带示范，计算20周期均值和标准差
+    const slice = closes.slice(-20);
+    const mean = slice.reduce((a,b) => a+b, 0)/slice.length;
+    const variance = slice.reduce((a,b) => a+(b - mean)**2, 0) / slice.length;
+    const stddev = Math.sqrt(variance);
+    const upperBand = (mean + 2*stddev).toFixed(2);
+    const lowerBand = (mean - 2*stddev).toFixed(2);
+
+    return {
+      MACD,
+      RSI,
+      Bollinger: `上轨:${upperBand} 下轨:${lowerBand}`
+    };
   }
 
-  function createOrUpdateChart(data) {
-    const ctx = document.getElementById('goldChart').getContext('2d');
-    const chartData = data.map(item => ({ x: item.t, y: item.c }));
-    if (goldChart) {
-      goldChart.data.datasets[0].data = chartData;
-      goldChart.update();
-    } else {
-      goldChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [{
-            label: '黄金价格',
-            data: chartData,
-            borderColor: '#0071e3',
-            backgroundColor: 'rgba(0, 113, 227, 0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2,
-            pointHoverRadius: 5,
-          }]
+  // 3. 渲染K线图，利用chartjs的candlestick插件
+  // 这里用Chart.js官方支持的candlestick图
+  function renderCandleChart(data) {
+    const ctx = document.getElementById('gold-candle-chart').getContext('2d');
+
+    const dataset = data.map(d => ({
+      x: d.t,
+      o: d.o,
+      h: d.h,
+      l: d.l,
+      c: d.c
+    }));
+
+    if (goldCandleChart) goldCandleChart.destroy();
+
+    goldCandleChart = new Chart(ctx, {
+      type: 'candlestick',
+      data: {
+        datasets: [{
+          label: '黄金K线',
+          data: dataset,
+          borderColor: 'black',
+          borderWidth: 1,
+          color: ctx => ctx.raw.c > ctx.raw.o ? '#16a34a' : '#dc2626',
+          risingColor: '#16a34a',
+          fallingColor: '#dc2626'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'time',
+            time: { tooltipFormat: 'MM-dd HH:mm' }
+          },
+          y: {
+            beginAtZero: false
+          }
         },
-        options: {
-          responsive: true,
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                tooltipFormat: 'MM/dd HH:mm:ss',
-                displayFormats: { minute: 'HH:mm' }
-              },
-              title: { display: true, text: '时间' }
-            },
-            y: {
-              beginAtZero: false,
-              title: { display: true, text: '价格 (元/克)' }
-            }
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  // 4. 渲染分时线图
+  function renderLineChart(data) {
+    const ctx = document.getElementById('gold-line-chart').getContext('2d');
+    const dataset = data.map(d => ({ x: d.t, y: d.c }));
+
+    if (goldLineChart) {
+      goldLineChart.data.datasets[0].data = dataset;
+      goldLineChart.update();
+      return;
+    }
+
+    goldLineChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: '黄金分时价格',
+          data: dataset,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.2)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'nearest',
+          intersect: false
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { tooltipFormat: 'MM-dd HH:mm' }
           },
-          interaction: {
-            mode: 'nearest',
-            intersect: false
-          },
-          plugins: {
-            legend: { display: true }
+          y: {
+            beginAtZero: false
           }
         }
-      });
-    }
-  }
-
-  function calcSuggestion(current, lastClose) {
-    if (current > lastClose) return '建议：当前价格上涨，考虑买入';
-    if (current < lastClose) return '建议：当前价格下跌，建议观望或减仓';
-    return '建议：价格持平，保持观望';
-  }
-
-  function calcProfit(current, openPrice) {
-    const diff = current - openPrice;
-    return `当前收益估算：${diff.toFixed(2)} 元/克`;
-  }
-
-  function formatHistory(history) {
-    return history.slice(-5).map(item => {
-      const time = new Date(item.t).toLocaleString();
-      return `${time}  开盘:${item.o}  最高:${item.h}  最低:${item.l}  收盘:${item.c}`;
-    }).join('\n');
-  }
-
-  async function init() {
-    try {
-      const [current, history] = await Promise.all([fetchCurrentPrice(), fetchHistory()]);
-      document.getElementById('gold-price').textContent = current.gold + ' 元/克';
-
-      if (history.length > 0) {
-        createOrUpdateChart(history);
-        document.getElementById('history').textContent = formatHistory(history);
-
-        const lastClose = history[history.length - 1].c;
-        document.getElementById('suggestion').textContent = calcSuggestion(parseFloat(current.gold), lastClose);
-        document.getElementById('profit').textContent = calcProfit(parseFloat(current.gold), history[0].o);
-      } else {
-        document.getElementById('history').textContent = '无历史数据';
-        document.getElementById('suggestion').textContent = '无法生成建议，缺少历史数据';
-        document.getElementById('profit').textContent = '无法计算收益，缺少历史数据';
       }
-    } catch (error) {
-      document.getElementById('gold-price').textContent = '加载失败';
-      document.getElementById('history').textContent = '加载失败';
-      document.getElementById('suggestion').textContent = '数据获取失败';
-      document.getElementById('profit').textContent = '收益计算失败';
-      console.error(error);
+    });
+  }
+
+  // 5. 更新实时行情面板及OHLC
+  async function loadRealTimeAndOHLC(historyData) {
+    try {
+      const res = await fetch(API_BASE + '/data');
+      if (!res.ok) throw new Error('实时行情接口异常');
+      const data = await res.json();
+
+      document.getElementById('gold-price').innerText = data.gold + ' 元/克';
+      document.getElementById('gold-update').innerText = data.updateTime || '-';
+
+      document.getElementById('silver-price').innerText = data.silver + ' 元/克';
+      document.getElementById('silver-update').innerText = data.updateTime || '-';
+
+      // 根据历史数据计算黄金OHLC
+      if (historyData.length > 0) {
+        const opens = historyData.map(i => i.o);
+        const highs = historyData.map(i => i.h);
+        const lows = historyData.map(i => i.l);
+
+        document.getElementById('gold-open').innerText = opens[0].toFixed(2);
+        document.getElementById('gold-high').innerText = Math.max(...highs).toFixed(2);
+        document.getElementById('gold-low').innerText = Math.min(...lows).toFixed(2);
+      } else {
+        ['gold-open', 'gold-high', 'gold-low'].forEach(id => document.getElementById(id).innerText = '-');
+      }
+
+      // 白银暂不绘制OHLC，留空
+      ['silver-open', 'silver-high', 'silver-low'].forEach(id => document.getElementById(id).innerText = '-');
+
+      return data;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('gold-price').innerText = '加载失败';
+      document.getElementById('silver-price').innerText = '加载失败';
+      return null;
     }
+  }
+
+  // 6. 加载历史价格数据
+  async function loadHistory() {
+    try {
+      const res = await fetch(API_BASE + '/history');
+      if (!res.ok) throw new Error('历史数据接口异常');
+      const json = await res.json();
+      return json.gold || [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  // 7. 根据技术指标和价格生成智能建议（示例，真实逻辑请基于实际需求）
+  function generateAdvice(indicators, currentPrice) {
+    const advice = [];
+
+    // 短线建议：根据MACD转正做买入/卖出示例
+    advice.push({
+      period: '短线',
+      direction: indicators.MACD === '转正' ? '买入' : '卖出',
+      entry: currentPrice.toFixed(2),
+      takeProfit: (currentPrice * (indicators.MACD === '转正' ? 1.007 : 0.993)).toFixed(2),
+      stopLoss: (currentPrice * (indicators.MACD === '转正' ? 0.995 : 1.005)).toFixed(2),
+      reason: 'MACD ' + indicators.MACD,
+      status: indicators.MACD === '转正' ? '等待中' : '观望',
+      statusClass: 'suggestion-neutral'
+    });
+
+    // 中线建议：基于RSI阈值示例
+    let midDir = '观望';
+    let midStatusClass = 'suggestion-neutral';
+    if (parseFloat(indicators.RSI) < 30) {
+      midDir = '买入';
+      midStatusClass = 'suggestion-neutral';
+    } else if (parseFloat(indicators.RSI) > 70) {
+      midDir = '卖出';
+      midStatusClass = 'suggestion-neutral';
+    }
+    advice.push({
+      period: '中线',
+      direction: midDir,
+      entry: currentPrice.toFixed(2),
+      takeProfit: (currentPrice * 1.02).toFixed(2),
+      stopLoss: (currentPrice * 0.98).toFixed(2),
+      reason: `RSI(${indicators.RSI})`,
+      status: '等待中',
+      statusClass: midStatusClass
+    });
+
+    // 长线建议：基于布林带位置示例
+    advice.push({
+      period: '长线',
+      direction: '布局',
+      entry: currentPrice.toFixed(2),
+      takeProfit: (parseFloat(indicators.Bollinger.split(' ')[0].split(':')[1]) || (currentPrice * 1.05)).toFixed(2),
+      stopLoss: (parseFloat(indicators.Bollinger.split(' ')[1].split(':')[1]) || (currentPrice * 0.95)).toFixed(2),
+      reason: '布林带周期轮动',
+      status: '未到达',
+      statusClass: 'text-gray-600'
+    });
+
+    return advice;
+  }
+
+  // 8. 渲染建议表格
+  function renderAdviceTable(adviceList) {
+    const tbody = document.getElementById('advice-table-body');
+    tbody.innerHTML = '';
+    adviceList.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.className = item.statusClass;
+      tr.innerHTML = `
+        <td class="p-2">${item.period}</td>
+        <td class="p-2">${item.direction}</td>
+        <td class="p-2">${item.entry}</td>
+        <td class="p-2">${item.takeProfit}</td>
+        <td class="p-2">${item.stopLoss}</td>
+        <td class="p-2">${item.reason}</td>
+        <td class="p-2">${item.status}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // 9. 加载并渲染24小时内历史建议
+  async function loadHistoryAdvice() {
+    try {
+      const res = await fetch(API_BASE + '/advice-history');
+      if (!res.ok) throw new Error('历史建议接口异常');
+      const history = await res.json();
+      if (!Array.isArray(history) || history.length === 0) {
+        document.getElementById('history-advice').innerText = '无历史建议';
+        return;
+      }
+
+      const now = Date.now();
+      const recent = history.filter(item => now - item.timestamp < 24*3600*1000)
+                            .sort((a,b) => b.timestamp - a.timestamp);
+
+      const container = document.getElementById('history-advice');
+      container.innerHTML = '';
+
+      recent.forEach(item => {
+        // 状态颜色
+        let goldColor = 'text-gray-700';
+        if (item.goldResult === 'profit') goldColor = 'suggestion-profit';
+        else if (item.goldResult === 'loss') goldColor = 'suggestion-loss';
+        else if (item.goldResult === 'expired') goldColor = 'text-gray-400';
+
+        let silverColor = 'text-gray-700';
+        if (item.silverResult === 'profit') silverColor = 'suggestion-profit';
+        else if (item.silverResult === 'loss') silverColor = 'suggestion-loss';
+        else if (item.silverResult === 'expired') silverColor = 'text-gray-400';
+
+        const timeStr = new Date(item.timestamp).toLocaleString();
+
+        const div = document.createElement('div');
+        div.className = "mb-2 border-b border-gray-300 pb-1";
+        div.innerHTML = `
+          <p><strong>${timeStr}</strong></p>
+          <p>黄金建议: <span class="${goldColor}">${item.gold.advice}，结果: ${item.goldResult || '等待中'}</span></p>
+          <p>白银建议: <span class="${silverColor}">${item.silver.advice}，结果: ${item.silverResult || '等待中'}</span></p>
+        `;
+        container.appendChild(div);
+      });
+    } catch (e) {
+      console.error(e);
+      document.getElementById('history-advice').innerText = '加载失败';
+    }
+  }
+
+  // 10. 计算收益统计（用最新价与历史开盘价做简单对比）
+  function calcProfitStats(history, currentPrice) {
+    if (!history || history.length === 0) return '无历史数据，无法计算收益';
+    const openPrice = history[0].o;
+    const profit = currentPrice - openPrice;
+    return `当前收益估算：${profit.toFixed(2)} 元/克`;
+  }
+
+  // 11. 初始化主流程
+  async function init() {
+    const historyData = await loadHistory();
+
+    // 渲染图表和技术指标
+    if (historyData.length > 0) {
+      renderLineChart(historyData);
+      renderCandleChart(historyData);
+      const indicators = calcIndicators(historyData);
+
+      // 显示技术指标
+      document.getElementById('tech-indicators').innerText = 
+        `MACD: ${indicators.MACD} | RSI: ${indicators.RSI} | 布林带: ${indicators.Bollinger}`;
+
+      // 加载实时价格
+      const realTimeData = await loadRealTimeAndOHLC(historyData);
+      if (realTimeData) {
+        // 智能建议
+        const advice = generateAdvice(indicators, parseFloat(realTimeData.gold));
+        renderAdviceTable(advice);
+        // 收益统计
+        document.getElementById('profit-stats').innerText = calcProfitStats(historyData, parseFloat(realTimeData.gold));
+      }
+    } else {
+      // 无历史数据，初始化空图和面板
+      renderLineChart([]);
+      renderCandleChart([]);
+      document.getElementById('tech-indicators').innerText = '无历史数据，无法计算技术指标';
+      await loadRealTimeAndOHLC([]);
+      document.getElementById('advice-table-body').innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">无历史数据，无法生成建议</td></tr>';
+      document.getElementById('profit-stats').innerText = '无历史数据，无法计算收益';
+    }
+
+    // 加载历史建议
+    await loadHistoryAdvice();
   }
 
   window.onload = init;
+
 </script>
+
 </body>
 </html>
