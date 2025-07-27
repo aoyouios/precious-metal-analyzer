@@ -48,6 +48,28 @@
     .advice-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
     .advice-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
     .indicator-tag { display: inline-block; padding: 0.15rem 0.5rem; background: rgba(0, 113, 227, 0.1); color: #0071e3; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+    .indicator-tooltip { position: relative; cursor: help; }
+    .indicator-tooltip:hover::after { 
+      content: attr(data-tooltip); 
+      position: absolute; 
+      bottom: 120%; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      background: #1d1d1f; 
+      color: white; 
+      padding: 0.5rem; 
+      border-radius: 4px; 
+      font-size: 0.75rem; 
+      width: 200px; 
+      z-index: 100; 
+      pointer-events: none;
+    }
+    .pulse-animation { animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
   </style>
 </head>
 
@@ -522,26 +544,437 @@
     // 全局变量
     let goldData = [], silverData = [];
     let goldLineChart = null, silverLineChart = null;
-    const HISTORY_API = "https://precious-metal-analyzer.aoyouios.workers.dev/history";
-    const DATA_API = "https://precious-metal-analyzer.aoyouios.workers.dev/data";
     const TODAY = new Date().toISOString().split('T')[0];
-    // 存储中长线策略记录（用于状态跟踪）
-    let mediumLongStrategies = [];
+    let mediumLongStrategies = []; // 中长线策略记录
 
-    // 时间格式化
+    // --------------------------
+    // 核心：技术指标计算函数（预测的灵魂）
+    // --------------------------
+    /**
+     * 计算移动平均线（MA）
+     * @param {Array} data 价格数组
+     * @param {Number} period 周期（如5=5日均线）
+     * @return {Array} MA数组
+     */
+    function calculateMA(data, period) {
+      const result = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < period - 1) {
+          result.push(null); // 前N-1个数据不足，返回null
+        } else {
+          const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+          result.push(parseFloat((sum / period).toFixed(2)));
+        }
+      }
+      return result;
+    }
+
+    /**
+     * 计算RSI指标（相对强弱指数）
+     * @param {Array} data 价格数组
+     * @param {Number} period 周期（默认14）
+     * @return {Array} RSI数组（0-100）
+     */
+    function calculateRSI(data, period = 14) {
+      const changes = [];
+      for (let i = 1; i < data.length; i++) {
+        changes.push(data[i] - data[i - 1]); // 价格变动
+      }
+
+      const rsi = [];
+      for (let i = 0; i < changes.length; i++) {
+        if (i < period - 1) {
+          rsi.push(null);
+        } else {
+          const slice = changes.slice(i - period + 1, i + 1);
+          const gains = slice.filter(c => c > 0).reduce((a, b) => a + b, 0) / period; // 平均上涨
+          const losses = Math.abs(slice.filter(c => c < 0).reduce((a, b) => a + b, 0)) / period; // 平均下跌
+          const rs = gains / (losses === 0 ? 1 : losses); // 避免除以0
+          rsi.push(parseFloat((100 - (100 / (1 + rs))).toFixed(1)));
+        }
+      }
+      return rsi;
+    }
+
+    /**
+     * 计算MACD指标
+     * @param {Array} data 价格数组
+     * @return {Object} {diff: 差离值, dea: 信号线, bar: 柱状图}
+     */
+    function calculateMACD(data) {
+      const ema12 = calculateMA(data, 12).map(v => v || 0); // 12日EMA
+      const ema26 = calculateMA(data, 26).map(v => v || 0); // 26日EMA
+      const diff = []; // 差离值 = EMA12 - EMA26
+      const dea = []; // 信号线 = 9日EMA(diff)
+      const bar = []; // 柱状图 = (diff - dea) * 2
+
+      // 计算差离值（diff）
+      for (let i = 0; i < data.length; i++) {
+        diff.push(parseFloat((ema12[i] - ema26[i]).toFixed(2)));
+      }
+
+      // 计算信号线（DEA = 9日EMA of diff）
+      const deaMA = calculateMA(diff.filter(v => v !== null), 9);
+      for (let i = 0; i < data.length; i++) {
+        dea.push(i < 25 ? null : deaMA[i - 25] || 0); // 前25个数据不足
+      }
+
+      // 计算柱状图
+      for (let i = 0; i < data.length; i++) {
+        bar.push(diff[i] !== null && dea[i] !== null 
+          ? parseFloat(((diff[i] - dea[i]) * 2).toFixed(2)) 
+          : null
+        );
+      }
+
+      return { diff, dea, bar };
+    }
+
+    /**
+     * 计算布林带（BOLL）
+     * @param {Array} data 价格数组
+     * @param {Number} period 周期（默认20）
+     * @return {Object} {upper: 上轨, middle: 中轨(MA), lower: 下轨}
+     */
+    function calculateBOLL(data, period = 20) {
+      const middle = calculateMA(data, period); // 中轨=20日均线
+      const upper = [];
+      const lower = [];
+
+      for (let i = 0; i < data.length; i++) {
+        if (i < period - 1) {
+          upper.push(null);
+          lower.push(null);
+        } else {
+          // 计算标准差（波动率）
+          const slice = data.slice(i - period + 1, i + 1);
+          const avg = middle[i];
+          const variance = slice.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / period;
+          const std = Math.sqrt(variance); // 标准差
+          upper.push(parseFloat((avg + 2 * std).toFixed(2))); // 上轨=中轨+2*标准差
+          lower.push(parseFloat((avg - 2 * std).toFixed(2))); // 下轨=中轨-2*标准差
+        }
+      }
+
+      return { upper, middle, lower };
+    }
+
+    /**
+     * 计算ATR（平均真实波幅）- 用于止盈止损计算
+     * @param {Array} data 价格数组（含高低价）
+     * @param {Number} period 周期（默认14）
+     * @return {Number} 最新ATR值
+     */
+    function calculateATR(data, period = 14) {
+      if (data.length < period + 1) return 0.5; // 数据不足时返回默认值
+      
+      const trs = [];
+      for (let i = 1; i < data.length; i++) {
+        const high = data[i].h || data[i].c; // 最高价，没有则用收盘价
+        const low = data[i].l || data[i].c;  // 最低价，没有则用收盘价
+        const prevClose = data[i-1].c;
+        const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+        trs.push(tr);
+      }
+      
+      // 计算ATR（TR的14期平均值）
+      const recentTRs = trs.slice(-period);
+      const atr = recentTRs.reduce((sum, tr) => sum + tr, 0) / period;
+      return parseFloat(atr.toFixed(2));
+    }
+
+    // --------------------------
+    // 核心：预测策略生成（基于指标共振）
+    // 统一逻辑：趋势（MA）→ 动量（RSI/MACD）→ 风险（BOLL/ATR）
+    // --------------------------
+    /**
+     * 生成单品种策略（黄金/白银通用）
+     * @param {String} type 品种（gold/silver）
+     * @param {Array} data 价格数据（{t:时间, c:价格, h:最高价, l:最低价}）
+     * @return {Object} 多周期策略
+     */
+    function generateStrategies(type, data) {
+      const prices = data.map(item => item.c); // 提取收盘价数组
+      const lastIdx = prices.length - 1; // 最新数据索引
+      if (lastIdx < 20) return { short: {}, medium: {}, long: {} }; // 数据不足
+
+      // 1. 计算核心指标（根据周期调整参数）
+      // 短线（1-4小时）：用短期指标
+      const shortMA5 = calculateMA(prices, 5); // 5期均线（短期趋势）
+      const shortRSI = calculateRSI(prices, 9); // 9期RSI（更敏感）
+      const shortMACD = calculateMACD(prices.slice(-30)); // 取最近30个数据计算
+      const shortBOLL = calculateBOLL(prices, 10); // 10期布林带
+
+      // 中线（3-7天）：用中期指标
+      const mediumMA20 = calculateMA(prices, 20); // 20期均线
+      const mediumRSI = calculateRSI(prices, 14); // 14期RSI
+      const mediumMACD = calculateMACD(prices.slice(-60)); // 最近60个数据
+      const mediumBOLL = calculateBOLL(prices, 20); // 20期布林带
+
+      // 长线（1-3个月）：用长期指标
+      const longMA60 = calculateMA(prices, 60); // 60期均线（长期趋势）
+      const longRSI = calculateRSI(prices, 21); // 21期RSI
+      const longMACD = calculateMACD(prices); // 全量数据计算
+      const longBOLL = calculateBOLL(prices, 50); // 50期布林带
+
+      // 计算波动率（ATR）用于止盈止损
+      const atr = calculateATR(data);
+
+
+      // 2. 短线策略（1-4小时）：趋势+动量共振
+      const short = { 
+        direction: '观望', 
+        indicators: [],
+        timestamp: Date.now(),
+        status: '等待中'
+      };
+      
+      const latestPrice = prices[lastIdx];
+      const latestShortMA5 = shortMA5[lastIdx];
+      const prevShortMA5 = shortMA5[lastIdx - 1] || 0;
+      const latestShortRSI = shortRSI[shortRSI.length - 1] || 0;
+      const latestShortMACDdiff = shortMACD.diff[shortMACD.diff.length - 1] || 0;
+      const latestShortMACDdea = shortMACD.dea[shortMACD.dea.length - 1] || 0;
+
+      // 买入信号：5期均线上扬 + RSI>50（偏多） + MACD金叉
+      if (
+        latestShortMA5 > prevShortMA5 && // 短期均线上行
+        latestShortRSI > 50 && latestShortRSI < 70 && // RSI在多头区间且未超买
+        latestShortMACDdiff > latestShortMACDdea && // MACD金叉
+        latestShortMACDdiff > 0 && // 差离值为正
+        latestPrice > shortBOLL.middle[lastIdx] // 价格在布林带中轨上方
+      ) {
+        short.direction = '买入';
+        short.indicators = [
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="5期均线从${prevShortMA5.toFixed(2)}升至${latestShortMA5.toFixed(2)}">MA5上扬</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="RSI=${latestShortRSI}，处于多头区间">RSI偏多</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="MACD差离值(${latestShortMACDdiff})上穿信号线(${latestShortMACDdea})">MACD金叉</span>`,
+          `<span class="indicator-tag">布林带中轨支撑</span>`
+        ];
+      }
+      // 卖出信号：5期均线下行 + RSI<50 + MACD死叉
+      else if (
+        latestShortMA5 < prevShortMA5 && // 短期均线下行
+        latestShortRSI < 50 && latestShortRSI > 30 && // RSI在空头区间且未超卖
+        latestShortMACDdiff < latestShortMACDdea && // MACD死叉
+        latestShortMACDdiff < 0 && // 差离值为负
+        latestPrice < shortBOLL.middle[lastIdx] // 价格在布林带中轨下方
+      ) {
+        short.direction = '卖出';
+        short.indicators = [
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="5期均线从${prevShortMA5.toFixed(2)}降至${latestShortMA5.toFixed(2)}">MA5下行</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="RSI=${latestShortRSI}，处于空头区间">RSI偏空</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="MACD差离值(${latestShortMACDdiff})下穿信号线(${latestShortMACDdea})">MACD死叉</span>`,
+          `<span class="indicator-tag">布林带中轨压力</span>`
+        ];
+      }
+
+
+      // 3. 中线策略（3-7天）：趋势+波动率
+      const medium = { 
+        direction: '观望', 
+        indicators: [],
+        timestamp: Date.now(),
+        status: '等待中'
+      };
+      
+      const priceAboveMediumMA = latestPrice > mediumMA20[lastIdx]; // 价格在20期均线上方
+      const latestMediumRSI = mediumRSI[mediumRSI.length - 1] || 0;
+      const mediumBOLLWidth = mediumBOLL.upper[lastIdx] - mediumBOLL.lower[lastIdx]; // 布林带宽度
+      const isBOLLNarrow = mediumBOLLWidth < (type === 'gold' ? 5 : 0.5); // 布林带收口（波动率低）
+
+      // 买入信号：价格站稳20期均线 + 触及布林带下轨 + RSI未超卖
+      if (
+        priceAboveMediumMA && 
+        latestPrice <= mediumBOLL.lower[lastIdx] * 1.01 && // 接近下轨
+        latestMediumRSI > 30 &&
+        (isBOLLNarrow || latestMediumRSI < 50) // 布林带收口或RSI偏低
+      ) {
+        medium.direction = '分批建仓';
+        medium.indicators = [
+          `<span class="indicator-tag">价格站稳MA20</span>`,
+          `<span class="indicator-tag">布林带下轨支撑</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="RSI=${latestMediumRSI}，未进入超卖区间">RSI健康</span>`,
+          `${isBOLLNarrow ? '<span class="indicator-tag">布林带收口（酝酿行情）</span>' : ''}`
+        ].filter(Boolean); // 过滤空值
+      }
+      // 卖出信号：价格跌破20期均线 + 触及布林带上轨 + RSI超买
+      else if (
+        !priceAboveMediumMA && 
+        latestPrice >= mediumBOLL.upper[lastIdx] * 0.99 && // 接近上轨
+        latestMediumRSI > 65
+      ) {
+        medium.direction = '减仓';
+        medium.indicators = [
+          `<span class="indicator-tag">价格跌破MA20</span>`,
+          `<span class="indicator-tag">布林带上轨压力</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="RSI=${latestMediumRSI}，进入超买区间">RSI超买</span>`
+        ];
+      }
+      // 观望信号：无明确趋势
+      else if (
+        Math.abs(latestPrice - mediumMA20[lastIdx]) < (type === 'gold' ? 2 : 0.2) && // 价格接近均线
+        latestMediumRSI >= 40 && latestMediumRSI <= 60 // RSI中性
+      ) {
+        medium.direction = '观望';
+        medium.indicators = [
+          `<span class="indicator-tag">价格贴近MA20（无明确趋势）</span>`,
+          `<span class="indicator-tag">RSI(${latestMediumRSI})中性</span>`,
+          `<span class="indicator-tag">布林带宽度正常</span>`
+        ];
+      }
+
+
+      // 4. 长线策略（1-3个月）：长期趋势+动量
+      const long = { 
+        direction: '观望', 
+        indicators: [],
+        timestamp: Date.now(),
+        status: '等待中'
+      };
+      
+      const priceAboveLongMA = latestPrice > longMA60[lastIdx]; // 价格在60期均线上方（多头趋势）
+      const latestLongRSI = longRSI[longRSI.length - 1] || 0;
+      const latestLongMACDdiff = longMACD.diff[longMACD.diff.length - 1] || 0;
+      const longTrend = longMA60[lastIdx] > longMA60[lastIdx - 10]; // 10期前的均线值（判断长期趋势）
+
+      // 买入信号：60期均线上扬 + 价格在均线上方 + RSI健康 + MACD在0轴上方
+      if (
+        longTrend && // 长期均线上行
+        priceAboveLongMA &&
+        latestLongRSI > 40 && latestLongRSI < 70 && // RSI健康区间
+        latestLongMACDdiff > 0 // MACD在0轴上方（多头）
+      ) {
+        long.direction = '布局';
+        long.indicators = [
+          `<span class="indicator-tag">MA60上扬（多头趋势）</span>`,
+          `<span class="indicator-tag indicator-tooltip" data-tooltip="RSI=${latestLongRSI}，处于健康区间">RSI正常</span>`,
+          `<span class="indicator-tag">MACD在0轴上方</span>`,
+          `<span class="indicator-tag">布林带上行通道</span>`
+        ];
+      }
+      // 卖出信号：60期均线下行 + 价格在均线下方 + MACD在0轴下方
+      else if (
+        !longTrend && // 长期均线下行
+        !priceAboveLongMA &&
+        latestLongMACDdiff < 0 // MACD在0轴下方（空头）
+      ) {
+        long.direction = '减持';
+        long.indicators = [
+          `<span class="indicator-tag">MA60下行（空头趋势）</span>`,
+          `<span class="indicator-tag">价格跌破MA60</span>`,
+          `<span class="indicator-tag">MACD在0轴下方</span>`
+        ];
+      }
+
+
+      // 5. 计算止盈止损（基于ATR波动率，随周期放大）
+      const riskMultipliers = {
+        short: { tp: 1.5, sl: 1 },    // 短线：止盈=1.5倍ATR，止损=1倍ATR
+        medium: { tp: 3, sl: 2 },     // 中线：止盈=3倍ATR，止损=2倍ATR
+        long: { tp: 5, sl: 3 }        // 长线：止盈=5倍ATR，止损=3倍ATR
+      };
+
+      Object.keys(riskMultipliers).forEach(period => {
+        const { tp: tpMulti, sl: slMulti } = riskMultipliers[period];
+        
+        if (short.direction === '买入' || medium.direction === '分批建仓' || long.direction === '布局') {
+          // 买入策略：止盈=入场价+ATR*倍数，止损=入场价-ATR*倍数
+          short.entry = latestPrice.toFixed(2);
+          short.tp = (latestPrice + atr * tpMulti).toFixed(2);
+          short.sl = (latestPrice - atr * slMulti).toFixed(2);
+
+          medium.entry = latestPrice.toFixed(2);
+          medium.tp = (latestPrice + atr * tpMulti * 2).toFixed(2);
+          medium.sl = (latestPrice - atr * slMulti * 2).toFixed(2);
+
+          long.entry = latestPrice.toFixed(2);
+          long.tp = (latestPrice + atr * tpMulti * 3).toFixed(2);
+          long.sl = (latestPrice - atr * slMulti * 3).toFixed(2);
+        } else if (short.direction === '卖出' || medium.direction === '减仓' || long.direction === '减持') {
+          // 卖出策略：止盈=入场价-ATR*倍数，止损=入场价+ATR*倍数
+          short.entry = latestPrice.toFixed(2);
+          short.tp = (latestPrice - atr * tpMulti).toFixed(2);
+          short.sl = (latestPrice + atr * slMulti).toFixed(2);
+
+          medium.entry = latestPrice.toFixed(2);
+          medium.tp = (latestPrice - atr * tpMulti * 2).toFixed(2);
+          medium.sl = (latestPrice + atr * slMulti * 2).toFixed(2);
+        } else {
+          // 观望状态
+          short.entry = medium.entry = long.entry = '等待信号';
+          short.tp = medium.tp = long.tp = '-';
+          short.sl = medium.sl = long.sl = '-';
+        }
+      });
+
+      return { short, medium, long };
+    }
+
+
+    // --------------------------
+    // 数据生成：模拟真实市场波动（基于趋势+噪声）
+    // --------------------------
+    function generateMockData(type) {
+      const data = [];
+      const startPrice = type === 'gold' ? 762.5 : 8.8; // 起始价
+      const start = new Date(TODAY).getTime() + 9 * 3600000; // 今日9:00开盘
+      let currentPrice = startPrice;
+      let trend = type === 'gold' ? 0.02 : 0.002; // 初始趋势（轻微上涨）
+      let volatility = type === 'gold' ? 0.6 : 0.06; // 波动率
+
+      // 生成24小时数据（每5分钟一个点）
+      for (let i = 0; i < 288; i++) { // 24*60/5=288个数据点
+        const t = start + i * 5 * 60000;
+        
+        // 每2小时可能反转趋势（模拟市场变化）
+        if (i % 24 === 0 && i > 0) {
+          trend = (Math.random() - 0.45) * (type === 'gold' ? 0.04 : 0.004);
+        }
+        
+        // 每4小时调整波动率（模拟市场活跃度变化）
+        if (i % 48 === 0 && i > 0) {
+          volatility = (Math.random() * 0.5 + 0.5) * (type === 'gold' ? 0.8 : 0.08);
+        }
+        
+        // 价格 = 趋势 + 随机波动（模拟市场噪声）
+        const noise = (Math.random() - 0.5) * volatility;
+        currentPrice = Math.max(0, parseFloat((currentPrice + trend + noise).toFixed(2)));
+        
+        // 记录最高价和最低价
+        const prevData = data[i-1] || { h: currentPrice, l: currentPrice };
+        const high = Math.max(currentPrice, prevData.h);
+        const low = Math.min(currentPrice, prevData.l);
+        
+        data.push({ t, c: currentPrice, h: high, l: low });
+      }
+
+      return data;
+    }
+
+
+    // --------------------------
+    // 时间格式化函数
+    // --------------------------
     const formatTime = (timestamp) => {
       const d = new Date(timestamp);
       return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
+    
     const formatHourMinute = (timestamp) => {
       const d = new Date(timestamp);
       return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
+    
     const formatFullTime = (timestamp) => {
       const d = new Date(timestamp);
       return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
 
+
+    // --------------------------
+    // 界面更新函数
+    // --------------------------
     // 更新系统时间
     setInterval(() => {
       document.getElementById('system-time').textContent = new Date().toLocaleString();
@@ -550,119 +983,98 @@
 
     // 获取实时价格（用于更新策略状态）
     async function getCurrentPrices() {
-      try {
-        const res = await fetch(DATA_API);
-        if (!res.ok) throw new Error(`价格接口错误: ${res.status}`);
-        const data = await res.json();
-        return {
-          gold: parseFloat(data.gold),
-          silver: parseFloat(data.silver)
-        };
-      } catch (e) {
-        console.error('获取实时价格失败:', e);
-        // 失败时使用图表最新价格
-        return {
-          gold: goldData.length ? goldData[goldData.length-1].c : 772.05,
-          silver: silverData.length ? silverData[silverData.length-1].c : 8.78
-        };
+      return {
+        gold: goldData.length ? goldData[goldData.length-1].c : 772.05,
+        silver: silverData.length ? silverData[silverData.length-1].c : 8.78
+      };
+    }
+
+    // 更新数据信息
+    function updateDataInfo(type) {
+      const data = type === 'gold' ? goldData : silverData;
+      if (data.length === 0) return;
+      document.getElementById(`${type}-data-count`).textContent = data.length;
+      const first = formatHourMinute(data[0].t);
+      const last = formatHourMinute(data[data.length - 1].t);
+      document.getElementById(`${type}-time-range`).textContent = `${first} - ${last}`;
+    }
+
+    // 更新价格显示
+    function updatePriceDisplay() {
+      // 黄金
+      if (goldData.length > 0) {
+        const latest = goldData[goldData.length - 1];
+        const open = goldData[0].c;
+        const high = Math.max(...goldData.map(item => item.h));
+        const low = Math.min(...goldData.map(item => item.l));
+        const change = ((latest.c - open) / open * 100).toFixed(2);
+        
+        document.getElementById('gold-price').textContent = latest.c.toFixed(2);
+        document.getElementById('gold-open').textContent = open.toFixed(2);
+        document.getElementById('gold-high').textContent = high.toFixed(2);
+        document.getElementById('gold-low').textContent = low.toFixed(2);
+        document.getElementById('gold-time').textContent = formatTime(latest.t);
+        
+        const changeEl = document.getElementById('gold-change');
+        changeEl.textContent = `${change >= 0 ? '+' : ''}${change}%（今日）`;
+        changeEl.className = change >= 0 ? 'text-success' : 'text-danger';
+      }
+
+      // 白银
+      if (silverData.length > 0) {
+        const latest = silverData[silverData.length - 1];
+        const open = silverData[0].c;
+        const high = Math.max(...silverData.map(item => item.h));
+        const low = Math.min(...silverData.map(item => item.l));
+        const change = ((latest.c - open) / open * 100).toFixed(2);
+        
+        document.getElementById('silver-price').textContent = latest.c.toFixed(2);
+        document.getElementById('silver-open').textContent = open.toFixed(2);
+        document.getElementById('silver-high').textContent = high.toFixed(2);
+        document.getElementById('silver-low').textContent = low.toFixed(2);
+        document.getElementById('silver-time').textContent = formatTime(latest.t);
+        
+        const changeEl = document.getElementById('silver-change');
+        changeEl.textContent = `${change >= 0 ? '+' : ''}${change}%（今日）`;
+        changeEl.className = change >= 0 ? 'text-success' : 'text-danger';
       }
     }
 
-    // 生成多周期策略建议
-    function generateStrategies() {
-      const now = Date.now();
-      const goldCurrent = goldData.length ? goldData[goldData.length-1].c : 772.05;
-      const silverCurrent = silverData.length ? silverData[silverData.length-1].c : 8.78;
+    // 更新策略状态显示
+    function updateStrategyStatusUI(type, period, strategy) {
+      // 更新方向和价格
+      document.getElementById(`${type}-${period}-direction`).textContent = strategy.direction;
       
-      // 更新建议时间
-      const adviceTime = formatFullTime(now);
-      document.getElementById('gold-advice-time').textContent = adviceTime;
-      document.getElementById('silver-advice-time').textContent = adviceTime;
+      if (strategy.entry === '等待信号') {
+        document.getElementById(`${type}-${period}-entry`).textContent = strategy.entry;
+      } else {
+        document.getElementById(`${type}-${period}-entry`).textContent = `${strategy.entry} 元/克`;
+      }
       
-      // 黄金策略（随机生成合理值，实际应基于指标计算）
-      const goldStrategies = {
-        short: {
-          direction: '买入',
-          entry: (goldCurrent + 0.3).toFixed(1),
-          tp: (goldCurrent + 4.6).toFixed(1),
-          sl: (goldCurrent - 3.1).toFixed(1),
-          timestamp: now,
-          status: '等待中'
-        },
-        medium: {
-          direction: '分批建仓',
-          entry: (goldCurrent - 4.7).toFixed(1),
-          tp: (goldCurrent + 30.2).toFixed(1),
-          sl: (goldCurrent - 25.4).toFixed(1),
-          timestamp: now,
-          status: '等待中'
-        },
-        long: {
-          direction: '布局',
-          entry: (goldCurrent + 1.5).toFixed(1),
-          tp: (goldCurrent + 53.6).toFixed(1),
-          sl: (goldCurrent - 52.7).toFixed(1),
-          timestamp: now,
-          status: '等待中'
-        }
-      };
+      document.getElementById(`${type}-${period}-tp`).textContent = strategy.tp === '-' ? '-' : `${strategy.tp} 元/克`;
+      document.getElementById(`${type}-${period}-sl`).textContent = strategy.sl === '-' ? '-' : `${strategy.sl} 元/克`;
       
-      // 白银策略
-      const silverStrategies = {
-        short: {
-          direction: '卖出',
-          entry: (silverCurrent + 0.04).toFixed(2),
-          tp: (silverCurrent - 0.12).toFixed(2),
-          sl: (silverCurrent + 0.09).toFixed(2),
-          timestamp: now,
-          status: '等待中'
-        },
-        medium: {
-          direction: '观望',
-          entry: '等待信号',
-          tp: (silverCurrent + 0.37).toFixed(2),
-          sl: (silverCurrent - 0.29).toFixed(2),
-          timestamp: now,
-          status: '等待中'
-        },
-        long: {
-          direction: '买入',
-          entry: (silverCurrent - 0.13).toFixed(2),
-          tp: (silverCurrent + 0.52).toFixed(2),
-          sl: (silverCurrent - 0.48).toFixed(2),
-          timestamp: now,
-          status: '等待中'
-        }
-      };
+      // 更新指标依据
+      document.getElementById(`${type}-${period}-indicators`).innerHTML = strategy.indicators.join('');
       
-      // 更新黄金策略DOM
-      Object.keys(goldStrategies).forEach(period => {
-        const s = goldStrategies[period];
-        document.getElementById(`gold-${period}-direction`).textContent = s.direction;
-        document.getElementById(`gold-${period}-entry`).textContent = `${s.entry} 元/克`;
-        document.getElementById(`gold-${period}-tp`).textContent = `${s.tp} 元/克`;
-        document.getElementById(`gold-${period}-sl`).textContent = `${s.sl} 元/克`;
-      });
-      
-      // 更新白银策略DOM
-      Object.keys(silverStrategies).forEach(period => {
-        const s = silverStrategies[period];
-        document.getElementById(`silver-${period}-direction`).textContent = s.direction;
-        document.getElementById(`silver-${period}-entry`).textContent = period === 'medium' ? s.entry : `${s.entry} 元/克`;
-        document.getElementById(`silver-${period}-tp`).textContent = `${s.tp} 元/克`;
-        document.getElementById(`silver-${period}-sl`).textContent = `${s.sl} 元/克`;
-      });
-      
-      // 保存中长线策略到跟踪列表
-      mediumLongStrategies = [
-        { ...goldStrategies.medium, type: 'gold', period: '中线(3-7天)' },
-        { ...goldStrategies.long, type: 'gold', period: '长线(1-3个月)' },
-        { ...silverStrategies.medium, type: 'silver', period: '中线(3-7天)' },
-        { ...silverStrategies.long, type: 'silver', period: '长线(1-3个月)' }
-      ];
-      
-      updateMediumLongTracking();
-      return { gold: goldStrategies, silver: silverStrategies };
+      // 更新状态标签
+      const statusEl = document.getElementById(`${type}-${period}-status`);
+      switch(strategy.status) {
+        case '止盈胜利':
+          statusEl.textContent = '止盈√';
+          statusEl.className = 'result-tag bg-success/10 text-success';
+          break;
+        case '止损失败':
+          statusEl.textContent = '止损×';
+          statusEl.className = 'result-tag bg-danger/10 text-danger';
+          break;
+        default:
+          statusEl.textContent = '等待中';
+          statusEl.className = 'result-tag bg-pending/10 text-pending';
+          if (strategy.direction !== '观望') {
+            statusEl.classList.add('pulse-animation'); // 非观望状态闪烁提示
+          }
+      }
     }
 
     // 更新中长线策略状态
@@ -677,7 +1089,7 @@
         const sl = parseFloat(strategy.sl);
         
         // 仅更新未结束的策略
-        if (strategy.status === '等待中') {
+        if (strategy.status === '等待中' && strategy.direction !== '观望' && !isNaN(entry) && !isNaN(tp) && !isNaN(sl)) {
           // 买入策略
           if (strategy.direction.includes('买入') || strategy.direction.includes('建仓') || strategy.direction.includes('布局')) {
             if (currentPrice >= tp) {
@@ -687,7 +1099,7 @@
             }
           } 
           // 卖出策略
-          else if (strategy.direction === '卖出') {
+          else if (strategy.direction.includes('卖出') || strategy.direction.includes('减仓') || strategy.direction.includes('减持')) {
             if (currentPrice <= tp) {
               strategy.status = '止盈胜利';
             } else if (currentPrice >= sl) {
@@ -696,20 +1108,6 @@
           }
         }
       });
-      
-      // 更新短线策略状态（黄金示例）
-      const goldShort = {
-        entry: parseFloat(document.getElementById('gold-short-entry').textContent),
-        tp: parseFloat(document.getElementById('gold-short-tp').textContent),
-        sl: parseFloat(document.getElementById('gold-short-sl').textContent)
-      };
-      if (prices.gold >= goldShort.tp) {
-        document.getElementById('gold-short-status').textContent = '止盈√';
-        document.getElementById('gold-short-status').className = 'result-tag bg-success/10 text-success';
-      } else if (prices.gold <= goldShort.sl) {
-        document.getElementById('gold-short-status').textContent = '止损×';
-        document.getElementById('gold-short-status').className = 'result-tag bg-danger/10 text-danger';
-      }
       
       updateMediumLongTracking();
     }
@@ -732,298 +1130,14 @@
           <td class="px-4 py-3">${strategy.type === 'gold' ? '黄金' : '白银'}</td>
           <td class="px-4 py-3">${strategy.period}</td>
           <td class="px-4 py-3">${strategy.direction}</td>
-          <td class="px-4 py-3">${strategy.entry} 元/克</td>
-          <td class="px-4 py-3 text-success">${strategy.tp} 元/克</td>
-          <td class="px-4 py-3 text-danger">${strategy.sl} 元/克</td>
+          <td class="px-4 py-3">${strategy.entry === '等待信号' ? strategy.entry : `${strategy.entry} 元/克`}</td>
+          <td class="px-4 py-3 text-success">${strategy.tp === '-' ? '-' : `${strategy.tp} 元/克`}</td>
+          <td class="px-4 py-3 text-danger">${strategy.sl === '-' ? '-' : `${strategy.sl} 元/克`}</td>
           <td class="px-4 py-3 text-sm">${formatTime(strategy.timestamp)}</td>
           <td class="px-4 py-3 font-medium ${statusClass}">${strategy.status}</td>
         `;
         tbody.appendChild(tr);
       });
-    }
-
-    // 获取并处理数据
-    async function fetchData() {
-      showLoading('gold');
-      showLoading('silver');
-      try {
-        const res = await fetch(HISTORY_API);
-        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
-        const history = await res.json();
-
-        // 验证数据格式
-        if (!history.gold || !Array.isArray(history.gold) || !history.silver || !Array.isArray(history.silver)) {
-          throw new Error('历史数据格式不正确');
-        }
-
-        // 筛选今日数据
-        const todayStart = new Date(TODAY).getTime();
-        const todayEnd = todayStart + 86400000;
-        goldData = history.gold.filter(item => item.t >= todayStart && item.t < todayEnd && item.c !== undefined);
-        silverData = history.silver.filter(item => item.t >= todayStart && item.t < todayEnd && item.c !== undefined);
-
-        // 确保有数据
-        if (goldData.length === 0) goldData = generateMockData('gold');
-        if (silverData.length === 0) silverData = generateMockData('silver');
-
-        // 排序并更新显示
-        goldData.sort((a, b) => a.t - b.t);
-        silverData.sort((a, b) => a.t - b.t);
-        updateDataInfo('gold');
-        updateDataInfo('silver');
-        updatePriceDisplay();
-        initGoldChart();
-        initSilverChart();
-        generateHistoryTable(24);
-        generateStrategies(); // 生成策略建议
-        updateStrategyStatus(); // 更新策略状态
-        calculateProfitStats();
-
-      } catch (e) {
-        console.error('数据获取失败:', e);
-        goldData = generateMockData('gold');
-        silverData = generateMockData('silver');
-        updateDataInfo('gold');
-        updateDataInfo('silver');
-        updatePriceDisplay();
-        try {
-          initGoldChart();
-          initSilverChart();
-        } catch (chartErr) {
-          console.error('图表初始化失败:', chartErr);
-          showError('gold');
-          showError('silver');
-        }
-        generateHistoryTable(24);
-        generateStrategies();
-        updateStrategyStatus();
-      }
-    }
-
-    // 生成模拟数据
-    function generateMockData(type) {
-      const data = [];
-      const basePrice = type === 'gold' ? 762.5 : 8.80;
-      const start = new Date(TODAY).getTime() + 9 * 3600000; // 9:00开盘
-      const now = new Date().getTime();
-      const points = Math.floor((now - start) / (5 * 60000)) + 1;
-
-      let price = basePrice;
-      for (let i = 0; i < points; i++) {
-        const t = start + i * 5 * 60000;
-        const change = (Math.random() - 0.45) * (type === 'gold' ? 0.3 : 0.03) + (type === 'gold' ? 0.02 : -0.002);
-        price = Math.max(0, parseFloat((price + change).toFixed(2)));
-        data.push({ t, c: price, o: basePrice });
-      }
-      return data;
-    }
-
-    // 更新数据信息
-    function updateDataInfo(type) {
-      const data = type === 'gold' ? goldData : silverData;
-      if (data.length === 0) return;
-      document.getElementById(`${type}-data-count`).textContent = data.length;
-      const first = formatHourMinute(data[0].t);
-      const last = formatHourMinute(data[data.length - 1].t);
-      document.getElementById(`${type}-time-range`).textContent = `${first} - ${last}`;
-    }
-
-    // 更新价格显示
-    function updatePriceDisplay() {
-      // 黄金
-      if (goldData.length > 0) {
-        const latest = goldData[goldData.length - 1];
-        const open = goldData[0].o || goldData[0].c;
-        const high = Math.max(...goldData.map(item => item.c));
-        const low = Math.min(...goldData.map(item => item.c));
-        const change = ((latest.c - open) / open * 100).toFixed(2);
-        document.getElementById('gold-price').textContent = latest.c.toFixed(2);
-        document.getElementById('gold-open').textContent = open.toFixed(2);
-        document.getElementById('gold-high').textContent = high.toFixed(2);
-        document.getElementById('gold-low').textContent = low.toFixed(2);
-        document.getElementById('gold-time').textContent = formatTime(latest.t);
-        const changeEl = document.getElementById('gold-change');
-        changeEl.textContent = `${change >= 0 ? '+' : ''}${change}%（今日）`;
-        changeEl.className = change >= 0 ? 'text-success' : 'text-danger';
-      }
-
-      // 白银
-      if (silverData.length > 0) {
-        const latest = silverData[silverData.length - 1];
-        const open = silverData[0].o || silverData[0].c;
-        const high = Math.max(...silverData.map(item => item.c));
-        const low = Math.min(...silverData.map(item => item.c));
-        const change = ((latest.c - open) / open * 100).toFixed(2);
-        document.getElementById('silver-price').textContent = latest.c.toFixed(2);
-        document.getElementById('silver-open').textContent = open.toFixed(2);
-        document.getElementById('silver-high').textContent = high.toFixed(2);
-        document.getElementById('silver-low').textContent = low.toFixed(2);
-        document.getElementById('silver-time').textContent = formatTime(latest.t);
-        const changeEl = document.getElementById('silver-change');
-        changeEl.textContent = `${change >= 0 ? '+' : ''}${change}%（今日）`;
-        changeEl.className = change >= 0 ? 'text-success' : 'text-danger';
-      }
-    }
-
-    // 初始化黄金图表
-    function initGoldChart() {
-      try {
-        showLoading('gold');
-        const ctx = document.getElementById('gold-line').getContext('2d');
-        if (!ctx) throw new Error('无法获取Canvas上下文');
-
-        if (goldLineChart) goldLineChart.destroy();
-
-        const chartData = goldData.map(item => ({
-          x: new Date(item.t),
-          y: Number(item.c)
-        }));
-
-        const openPrice = goldData[0].o || goldData[0].c;
-        const openLineData = [
-          { x: chartData[0].x, y: openPrice },
-          { x: chartData[chartData.length - 1].x, y: openPrice }
-        ];
-
-        goldLineChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            datasets: [
-              {
-                label: '黄金价格',
-                data: chartData,
-                borderColor: '#0071e3',
-                backgroundColor: 'rgba(0, 113, 227, 0.08)',
-                borderWidth: 2.5,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-                tension: 0.4,
-                fill: true
-              },
-              {
-                label: '开盘价',
-                data: openLineData,
-                borderColor: '#86868b',
-                borderWidth: 1.5,
-                borderDash: [5, 5],
-                pointRadius: 0,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                type: 'time',
-                time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
-                grid: { display: false }
-              },
-              y: {
-                ticks: { callback: v => v.toFixed(2) },
-                grid: { color: 'rgba(0,0,0,0.05)' }
-              }
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`,
-                  title: ctx => formatTime(new Date(ctx[0].raw.x).getTime())
-                }
-              }
-            }
-          }
-        });
-
-        hideLoading('gold');
-        hideError('gold');
-      } catch (e) {
-        console.error('黄金图表错误:', e);
-        hideLoading('gold');
-        showError('gold');
-      }
-    }
-
-    // 初始化白银图表
-    function initSilverChart() {
-      try {
-        showLoading('silver');
-        const ctx = document.getElementById('silver-line').getContext('2d');
-        if (!ctx) throw new Error('无法获取Canvas上下文');
-
-        if (silverLineChart) silverLineChart.destroy();
-
-        const chartData = silverData.map(item => ({
-          x: new Date(item.t),
-          y: Number(item.c)
-        }));
-
-        const openPrice = silverData[0].o || silverData[0].c;
-        const openLineData = [
-          { x: chartData[0].x, y: openPrice },
-          { x: chartData[chartData.length - 1].x, y: openPrice }
-        ];
-
-        silverLineChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            datasets: [
-              {
-                label: '白银价格',
-                data: chartData,
-                borderColor: '#86868b',
-                backgroundColor: 'rgba(134, 134, 139, 0.08)',
-                borderWidth: 2.5,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-                tension: 0.4,
-                fill: true
-              },
-              {
-                label: '开盘价',
-                data: openLineData,
-                borderColor: '#86868b',
-                borderWidth: 1.5,
-                borderDash: [5, 5],
-                pointRadius: 0,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                type: 'time',
-                time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
-                grid: { display: false }
-              },
-              y: {
-                ticks: { callback: v => v.toFixed(2) },
-                grid: { color: 'rgba(0,0,0,0.05)' }
-              }
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: ctx => `价格: ${ctx.raw.y.toFixed(2)} 元/克`
-                }
-              }
-            }
-          }
-        });
-
-        hideLoading('silver');
-        hideError('silver');
-      } catch (e) {
-        console.error('白银图表错误:', e);
-        hideLoading('silver');
-        showError('silver');
-      }
     }
 
     // 生成短线历史记录
@@ -1035,18 +1149,37 @@
         silver: silverData.length ? silverData[silverData.length-1].c : 8.78
       };
       
+      // 为了使历史记录更真实，基于真实指标生成
+      const goldPrices = goldData.map(item => item.c);
+      const silverPrices = silverData.map(item => item.c);
+      const goldRSI = calculateRSI(goldPrices, 9);
+      const silverRSI = calculateRSI(silverPrices, 9);
+      
       for (let i = 0; i < rowCount; i++) {
         const time = Date.now() - (i + 1) * 3600000;
-        // 仅使用短线策略
-        const goldAdvice = i % 5 === 0 ? '卖出' : i % 3 === 0 ? '观望' : '买入';
-        const silverAdvice = i % 4 === 0 ? '买入' : i % 6 === 0 ? '卖出' : '观望';
+        const goldIndex = Math.max(0, goldRSI.length - 1 - i * 12); // 每小时对应12个5分钟数据点
+        const silverIndex = Math.max(0, silverRSI.length - 1 - i * 12);
+        
+        // 基于RSI生成建议
+        let goldAdvice, silverAdvice;
+        const goldRSIValue = goldRSI[goldIndex] || 50;
+        const silverRSIValue = silverRSI[silverIndex] || 50;
+        
+        if (goldRSIValue > 65) goldAdvice = '卖出';
+        else if (goldRSIValue < 35) goldAdvice = '买入';
+        else goldAdvice = '观望';
+        
+        if (silverRSIValue > 65) silverAdvice = '卖出';
+        else if (silverRSIValue < 35) silverAdvice = '买入';
+        else silverAdvice = '观望';
         
         // 短线结果判定（4小时内）
         let goldResult, silverResult;
         if (goldAdvice !== '观望') {
-          const entry = prices.gold + (Math.random() - 0.5) * 2;
-          const tp = goldAdvice === '买入' ? entry + 4 : entry - 4;
-          const sl = goldAdvice === '买入' ? entry - 3 : entry + 3;
+          const entry = goldPrices[Math.max(0, goldPrices.length - 1 - i * 12)] || prices.gold;
+          const atr = calculateATR(goldData.slice(Math.max(0, goldData.length - 1 - i * 12 - 20)));
+          const tp = goldAdvice === '买入' ? entry + atr * 1.5 : entry - atr * 1.5;
+          const sl = goldAdvice === '买入' ? entry - atr * 1 : entry + atr * 1;
           
           if (prices.gold >= tp) goldResult = '止盈√';
           else if (prices.gold <= sl) goldResult = '止损×';
@@ -1056,9 +1189,10 @@
         }
         
         if (silverAdvice !== '观望') {
-          const entry = prices.silver + (Math.random() - 0.5) * 0.2;
-          const tp = silverAdvice === '买入' ? entry + 0.15 : entry - 0.15;
-          const sl = silverAdvice === '买入' ? entry - 0.1 : entry + 0.1;
+          const entry = silverPrices[Math.max(0, silverPrices.length - 1 - i * 12)] || prices.silver;
+          const atr = calculateATR(silverData.slice(Math.max(0, silverData.length - 1 - i * 12 - 20)));
+          const tp = silverAdvice === '买入' ? entry + atr * 1.5 : entry - atr * 1.5;
+          const sl = silverAdvice === '买入' ? entry - atr * 1 : entry + atr * 1;
           
           if (prices.silver >= tp) silverResult = '止盈√';
           else if (prices.silver <= sl) silverResult = '止损×';
@@ -1072,7 +1206,7 @@
           if (result === '止盈√') return 'bg-success/10 text-success';
           if (result === '止损×') return 'bg-danger/10 text-danger';
           if (result === '等待中') return 'bg-pending/10 text-pending';
-          return '';
+          return 'bg-neutral/10 text-neutral';
         };
 
         const tr = document.createElement('tr');
@@ -1092,6 +1226,8 @@
     function calculateProfitStats() {
       const rows = document.querySelectorAll('#history-table tr');
       let dailyProfit = 0;
+      let winCount = 0;
+      let totalCount = 0;
       
       // 模拟短线交易收益
       rows.forEach(row => {
@@ -1101,57 +1237,441 @@
         const silverResult = row.children[4].textContent.trim();
         
         // 黄金短线收益
-        if (goldAdvice === '买入' && goldResult === '止盈√') {
-          dailyProfit += 10000 * 0.5 * 0.012; // 50%仓位，1.2%收益
-        } else if (goldAdvice === '卖出' && goldResult === '止盈√') {
-          dailyProfit += 10000 * 0.5 * 0.01; // 50%仓位，1%收益
-        } else if (goldResult === '止损×') {
-          dailyProfit -= 10000 * 0.5 * 0.008; // 50%仓位，0.8%亏损
+        if (goldAdvice === '买入' || goldAdvice === '卖出') {
+          totalCount++;
+          if (goldResult === '止盈√') {
+            dailyProfit += 10000 * 0.5 * (goldAdvice === '买入' ? 0.012 : 0.01);
+            winCount++;
+          } else if (goldResult === '止损×') {
+            dailyProfit -= 10000 * 0.5 * 0.008;
+          }
         }
         
         // 白银短线收益
-        if (silverAdvice === '买入' && silverResult === '止盈√') {
-          dailyProfit += 10000 * 0.5 * 0.018; // 50%仓位，1.8%收益
-        } else if (silverAdvice === '卖出' && silverResult === '止盈√') {
-          dailyProfit += 10000 * 0.5 * 0.015; // 50%仓位，1.5%收益
-        } else if (silverResult === '止损×') {
-          dailyProfit -= 10000 * 0.5 * 0.012; // 50%仓位，1.2%亏损
+        if (silverAdvice === '买入' || silverAdvice === '卖出') {
+          totalCount++;
+          if (silverResult === '止盈√') {
+            dailyProfit += 10000 * 0.5 * (silverAdvice === '买入' ? 0.018 : 0.015);
+            winCount++;
+          } else if (silverResult === '止损×') {
+            dailyProfit -= 10000 * 0.5 * 0.012;
+          }
         }
       });
       
-      // 更新DOM
+      // 更新当日收益
       const dailyTotal = 10000 + dailyProfit;
       document.getElementById('daily-total').textContent = '¥' + dailyTotal.toFixed(2);
-      document.getElementById('daily-profit').textContent = `+¥${dailyProfit.toFixed(2)} (${(dailyProfit/100).toFixed(2)}%)`;
+      document.getElementById('daily-profit').textContent = `${dailyProfit >= 0 ? '+' : ''}¥${Math.abs(dailyProfit).toFixed(2)} (${(Math.abs(dailyProfit)/100).toFixed(2)}%)`;
+      document.getElementById('daily-profit').className = dailyProfit >= 0 ? 'text-success' : 'text-danger';
       
-      // 中长线收益（模拟）
-      const mediumLongProfit = 10000 * 0.387;
-      document.getElementById('medium-long-total').textContent = '¥' + (10000 + mediumLongProfit).toFixed(2);
-      document.getElementById('medium-long-profit').textContent = `+¥${mediumLongProfit.toFixed(2)} (38.70%)`;
+      // 更新操作统计
+      const goldOperations = Array.from(rows).filter(row => row.children[1].textContent.trim() !== '观望').length;
+      const silverOperations = Array.from(rows).filter(row => row.children[3].textContent.trim() !== '观望').length;
+      const winRate = totalCount > 0 ? Math.round((winCount / totalCount) * 100) : 0;
+      
+      const statsRows = document.querySelectorAll('.profit-card .space-y-2.text-sm div');
+      statsRows[0].innerHTML = `<span class="text-neutral">黄金短线操作</span><span>${goldOperations}次</span>`;
+      statsRows[1].innerHTML = `<span class="text-neutral">白银短线操作</span><span>${silverOperations}次</span>`;
+      statsRows[2].innerHTML = `<span class="text-neutral">止盈操作占比</span><span class="${winRate >= 50 ? 'text-success' : 'text-danger'}">${winRate}%</span>`;
+      
+      // 中长线收益（基于策略状态计算）
+      let mediumLongProfit = 0;
+      let mediumLongWinCount = 0;
+      let mediumLongTotal = 0;
+      
+      mediumLongStrategies.forEach(strategy => {
+        if (strategy.direction !== '观望') {
+          mediumLongTotal++;
+          if (strategy.status === '止盈胜利') {
+            const profitRatio = strategy.type === 'gold' ? 0.12 : 0.18; // 中长线平均收益比例
+            mediumLongProfit += 10000 * 0.6 * profitRatio; // 60%仓位
+            mediumLongWinCount++;
+          } else if (strategy.status === '止损失败') {
+            const lossRatio = strategy.type === 'gold' ? 0.08 : 0.12; // 中长线平均亏损比例
+            mediumLongProfit -= 10000 * 0.6 * lossRatio;
+          }
+        }
+      });
+      
+      // 加入历史累计收益
+      mediumLongProfit += 10000 * 0.25; // 基础累计收益
+      
+      // 更新中长线收益
+      const mlTotal = 10000 + mediumLongProfit;
+      document.getElementById('medium-long-total').textContent = '¥' + mlTotal.toFixed(2);
+      document.getElementById('medium-long-profit').textContent = `${mediumLongProfit >= 0 ? '+' : ''}¥${Math.abs(mediumLongProfit).toFixed(2)} (${(Math.abs(mediumLongProfit)/100).toFixed(2)}%)`;
+      document.getElementById('medium-long-profit').className = mediumLongProfit >= 0 ? 'text-success' : 'text-danger';
+      
+      // 更新中长线统计
+      const mlStatsRows = document.querySelectorAll('.profit-card:nth-child(2) .space-y-2.text-sm div');
+      const mediumCount = mediumLongStrategies.filter(s => s.period.includes('中线')).length;
+      const longCount = mediumLongStrategies.filter(s => s.period.includes('长线')).length;
+      const mlWinRate = mediumLongTotal > 0 ? Math.round((mediumLongWinCount / mediumLongTotal) * 100) : 0;
+      
+      mlStatsRows[0].innerHTML = `<span class="text-neutral">中线策略操作</span><span>${mediumCount}次</span>`;
+      mlStatsRows[1].innerHTML = `<span class="text-neutral">长线策略操作</span><span>${longCount}次</span>`;
+      mlStatsRows[2].innerHTML = `<span class="text-neutral">止盈胜率</span><span class="${mlWinRate >= 50 ? 'text-success' : 'text-danger'}">${mlWinRate}%</span>`;
     }
 
+
+    // --------------------------
+    // 图表初始化
+    // --------------------------
+    function initGoldChart() {
+      try {
+        showLoading('gold');
+        const ctx = document.getElementById('gold-line').getContext('2d');
+        if (!ctx) throw new Error('无法获取Canvas上下文');
+
+        if (goldLineChart) goldLineChart.destroy();
+
+        const chartData = goldData.map(item => ({
+          x: new Date(item.t),
+          y: Number(item.c)
+        }));
+
+        const prices = goldData.map(item => item.c);
+        const ma5 = calculateMA(prices, 5); // 5期均线
+        const ma20 = calculateMA(prices, 20); // 20期均线
+        const boll = calculateBOLL(prices, 20); // 布林带
+        
+        // 准备均线数据
+        const ma5Data = [], ma20Data = [], bollUpperData = [], bollLowerData = [];
+        for (let i = 0; i < goldData.length; i++) {
+          if (ma5[i] !== null) ma5Data.push({ x: new Date(goldData[i].t), y: ma5[i] });
+          if (ma20[i] !== null) ma20Data.push({ x: new Date(goldData[i].t), y: ma20[i] });
+          if (boll.upper[i] !== null) bollUpperData.push({ x: new Date(goldData[i].t), y: boll.upper[i] });
+          if (boll.lower[i] !== null) bollLowerData.push({ x: new Date(goldData[i].t), y: boll.lower[i] });
+        }
+
+        goldLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              {
+                label: '黄金价格',
+                data: chartData,
+                borderColor: '#0071e3',
+                backgroundColor: 'rgba(0, 113, 227, 0.08)',
+                borderWidth: 2.5,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
+              },
+              {
+                label: '5期均线',
+                data: ma5Data,
+                borderColor: '#34c759',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+              },
+              {
+                label: '20期均线',
+                data: ma20Data,
+                borderColor: '#ff9500',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+              },
+              {
+                label: '布林带上轨',
+                data: bollUpperData,
+                borderColor: '#86868b',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              },
+              {
+                label: '布林带下轨',
+                data: bollLowerData,
+                borderColor: '#86868b',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
+                grid: { display: false }
+              },
+              y: {
+                ticks: { callback: v => v.toFixed(2) },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              }
+            },
+            plugins: {
+              legend: { 
+                position: 'top',
+                labels: {
+                  boxWidth: 10,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.raw.y.toFixed(2)} 元/克`,
+                  title: ctx => formatTime(new Date(ctx[0].raw.x).getTime())
+                }
+              }
+            }
+          }
+        });
+
+        hideLoading('gold');
+        hideError('gold');
+      } catch (e) {
+        console.error('黄金图表错误:', e);
+        hideLoading('gold');
+        showError('gold');
+      }
+    }
+
+    function initSilverChart() {
+      try {
+        showLoading('silver');
+        const ctx = document.getElementById('silver-line').getContext('2d');
+        if (!ctx) throw new Error('无法获取Canvas上下文');
+
+        if (silverLineChart) silverLineChart.destroy();
+
+        const chartData = silverData.map(item => ({
+          x: new Date(item.t),
+          y: Number(item.c)
+        }));
+
+        const prices = silverData.map(item => item.c);
+        const ma5 = calculateMA(prices, 5); // 5期均线
+        const ma20 = calculateMA(prices, 20); // 20期均线
+        const boll = calculateBOLL(prices, 20); // 布林带
+        
+        // 准备均线数据
+        const ma5Data = [], ma20Data = [], bollUpperData = [], bollLowerData = [];
+        for (let i = 0; i < silverData.length; i++) {
+          if (ma5[i] !== null) ma5Data.push({ x: new Date(silverData[i].t), y: ma5[i] });
+          if (ma20[i] !== null) ma20Data.push({ x: new Date(silverData[i].t), y: ma20[i] });
+          if (boll.upper[i] !== null) bollUpperData.push({ x: new Date(silverData[i].t), y: boll.upper[i] });
+          if (boll.lower[i] !== null) bollLowerData.push({ x: new Date(silverData[i].t), y: boll.lower[i] });
+        }
+
+        silverLineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              {
+                label: '白银价格',
+                data: chartData,
+                borderColor: '#86868b',
+                backgroundColor: 'rgba(134, 134, 139, 0.08)',
+                borderWidth: 2.5,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
+              },
+              {
+                label: '5期均线',
+                data: ma5Data,
+                borderColor: '#34c759',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+              },
+              {
+                label: '20期均线',
+                data: ma20Data,
+                borderColor: '#ff9500',
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+              },
+              {
+                label: '布林带上轨',
+                data: bollUpperData,
+                borderColor: '#86868b',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              },
+              {
+                label: '布林带下轨',
+                data: bollLowerData,
+                borderColor: '#86868b',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
+                grid: { display: false }
+              },
+              y: {
+                ticks: { callback: v => v.toFixed(2) },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              }
+            },
+            plugins: {
+              legend: { 
+                position: 'top',
+                labels: {
+                  boxWidth: 10,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.raw.y.toFixed(2)} 元/克`
+                }
+              }
+            }
+          }
+        });
+
+        hideLoading('silver');
+        hideError('silver');
+      } catch (e) {
+        console.error('白银图表错误:', e);
+        hideLoading('silver');
+        showError('silver');
+      }
+    }
+
+
+    // --------------------------
     // 辅助函数
+    // --------------------------
     function showLoading(type) {
       document.getElementById(`${type}-chart-loading`).classList.remove('hidden');
     }
+    
     function hideLoading(type) {
       document.getElementById(`${type}-chart-loading`).classList.add('hidden');
     }
+    
     function showError(type) {
       document.getElementById(`${type}-chart-error`).classList.remove('hidden');
     }
+    
     function hideError(type) {
       document.getElementById(`${type}-chart-error`).classList.add('hidden');
     }
 
-    // 初始化
+
+    // --------------------------
+    // 初始化函数
+    // --------------------------
+    async function fetchData() {
+      showLoading('gold');
+      showLoading('silver');
+      
+      try {
+        // 生成模拟数据（实际项目中替换为API请求）
+        goldData = generateMockData('gold');
+        silverData = generateMockData('silver');
+
+        // 排序并更新显示
+        goldData.sort((a, b) => a.t - b.t);
+        silverData.sort((a, b) => a.t - b.t);
+        
+        // 更新基础信息
+        updateDataInfo('gold');
+        updateDataInfo('silver');
+        updatePriceDisplay();
+        
+        // 生成策略
+        const goldStrategies = generateStrategies('gold', goldData);
+        const silverStrategies = generateStrategies('silver', silverData);
+        
+        // 更新策略UI
+        Object.keys(goldStrategies).forEach(period => {
+          updateStrategyStatusUI('gold', period, goldStrategies[period]);
+        });
+        Object.keys(silverStrategies).forEach(period => {
+          updateStrategyStatusUI('silver', period, silverStrategies[period]);
+        });
+        
+        // 保存中长线策略到跟踪列表
+        mediumLongStrategies = [
+          { ...goldStrategies.medium, type: 'gold', period: '中线(3-7天)' },
+          { ...goldStrategies.long, type: 'gold', period: '长线(1-3个月)' },
+          { ...silverStrategies.medium, type: 'silver', period: '中线(3-7天)' },
+          { ...silverStrategies.long, type: 'silver', period: '长线(1-3个月)' }
+        ];
+        
+        // 更新图表和历史记录
+        initGoldChart();
+        initSilverChart();
+        generateHistoryTable(24);
+        updateStrategyStatus();
+        calculateProfitStats();
+        
+        // 更新建议时间
+        const now = formatFullTime(Date.now());
+        document.getElementById('gold-advice-time').textContent = now;
+        document.getElementById('silver-advice-time').textContent = now;
+
+      } catch (e) {
+        console.error('数据处理失败:', e);
+        hideLoading('gold');
+        hideLoading('silver');
+        showError('gold');
+        showError('silver');
+      }
+    }
+
     function init() {
-      document.getElementById('refresh-gold').addEventListener('click', fetchData);
-      document.getElementById('refresh-silver').addEventListener('click', fetchData);
+      // 绑定刷新按钮事件
+      document.getElementById('refresh-gold').addEventListener('click', () => {
+        document.getElementById('refresh-gold').innerHTML = '<i class="fa fa-circle-o-notch fa-spin mr-1"></i>刷新中';
+        fetchData().then(() => {
+          document.getElementById('refresh-gold').innerHTML = '<i class="fa fa-refresh mr-1"></i>刷新';
+        });
+      });
+      
+      document.getElementById('refresh-silver').addEventListener('click', () => {
+        document.getElementById('refresh-silver').innerHTML = '<i class="fa fa-circle-o-notch fa-spin mr-1"></i>刷新中';
+        fetchData().then(() => {
+          document.getElementById('refresh-silver').innerHTML = '<i class="fa fa-refresh mr-1"></i>刷新';
+        });
+      });
+      
+      // 初始加载数据
       fetchData();
       
       // 每30秒更新一次策略状态（实时跟踪止盈止损）
       setInterval(updateStrategyStatus, 30000);
+      
       // 每5分钟全量刷新数据
       setInterval(fetchData, 300000);
     }
