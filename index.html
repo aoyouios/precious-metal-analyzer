@@ -572,6 +572,28 @@
     });
 
     // --------------------------
+    // 时间处理工具函数（核心修复）
+    // --------------------------
+    /**
+     * 安全转换时间戳为 Date 对象（兼容秒级/毫秒级、字符串/数字）
+     * @param {string|number} ts - 时间戳（如 1753244333344 或 "1753244333"）
+     * @returns {Date} 有效 Date 对象（无效时返回当前时间）
+     */
+    function safeTimestampToDate(ts) {
+      // 统一转换为数字类型
+      let timestamp = typeof ts === 'string' ? Number(ts) : ts;
+      
+      // 处理秒级时间戳（10位）转毫秒级（13位）
+      if (timestamp && timestamp.toString().length === 10) {
+        timestamp *= 1000;
+      }
+
+      // 防御性处理：无效时间戳返回当前时间
+      const date = new Date(timestamp);
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+
+    // --------------------------
     // API数据获取函数
     // --------------------------
     /**
@@ -595,9 +617,22 @@
         // 更新价格信息
         updatePriceData(priceData);
         
-        // 更新历史数据和图表
-        goldData = historyData.gold || [];
-        silverData = historyData.silver || [];
+        // 处理历史数据（修复时间戳问题）
+        goldData = (historyData.gold || []).map(item => ({
+          ...item,
+          t: safeTimestampToDate(item.t), // 关键修复：统一转换时间
+          c: parseFloat(item.c),
+          h: parseFloat(item.h || item.c),
+          l: parseFloat(item.l || item.c)
+        })).filter(item => !isNaN(item.t.getTime())); // 过滤无效时间
+        
+        silverData = (historyData.silver || []).map(item => ({
+          ...item,
+          t: safeTimestampToDate(item.t), // 关键修复：统一转换时间
+          c: parseFloat(item.c),
+          h: parseFloat(item.h || item.c),
+          l: parseFloat(item.l || item.c)
+        })).filter(item => !isNaN(item.t.getTime())); // 过滤无效时间
         
         initGoldChart();
         initSilverChart();
@@ -637,7 +672,13 @@
         const historyResponse = await fetch(HISTORY_API_URL);
         if (historyResponse.ok) {
           const historyData = await historyResponse.json();
-          goldData = historyData.gold || [];
+          goldData = (historyData.gold || []).map(item => ({
+            ...item,
+            t: safeTimestampToDate(item.t),
+            c: parseFloat(item.c),
+            h: parseFloat(item.h || item.c),
+            l: parseFloat(item.l || item.c)
+          })).filter(item => !isNaN(item.t.getTime()));
           initGoldChart();
           updateHistoryTable();
         }
@@ -672,7 +713,13 @@
         const historyResponse = await fetch(HISTORY_API_URL);
         if (historyResponse.ok) {
           const historyData = await historyResponse.json();
-          silverData = historyData.silver || [];
+          silverData = (historyData.silver || []).map(item => ({
+            ...item,
+            t: safeTimestampToDate(item.t),
+            c: parseFloat(item.c),
+            h: parseFloat(item.h || item.c),
+            l: parseFloat(item.l || item.c)
+          })).filter(item => !isNaN(item.t.getTime()));
           initSilverChart();
           updateHistoryTable();
         }
@@ -694,8 +741,8 @@
       if (!priceData) return;
       
       // 格式化时间
-      const updateTime = new Date(priceData.updateTime);
-      const formattedTime = `${updateTime.getFullYear()}/${updateTime.getMonth() + 1}/${updateTime.getDate()} ${updateTime.getHours().toString().padStart(2, '0')}:${updateTime.getMinutes().toString().padStart(2, '0')}`;
+      const updateTime = safeTimestampToDate(priceData.updateTime);
+      const formattedTime = `${updateTime.getFullYear()}/${(updateTime.getMonth() + 1).toString().padStart(2, '0')}/${updateTime.getDate().toString().padStart(2, '0')} ${updateTime.getHours().toString().padStart(2, '0')}:${updateTime.getMinutes().toString().padStart(2, '0')}`;
       
       // 更新黄金价格
       if (priceData.gold) {
@@ -889,7 +936,7 @@
     }
 
     // --------------------------
-    // 图表初始化函数
+    // 图表初始化函数（修复时间轴显示）
     // --------------------------
     /**
      * 初始化黄金图表
@@ -900,14 +947,14 @@
       // 更新数据统计
       document.getElementById('gold-data-count').textContent = goldData.length;
       if (goldData.length > 0) {
-        const firstTime = new Date(goldData[0].t);
-        const lastTime = new Date(goldData[goldData.length - 1].t);
+        const firstTime = goldData[0].t;
+        const lastTime = goldData[goldData.length - 1].t;
         const timeRange = `${formatDate(firstTime)} - ${formatDate(lastTime)}`;
         document.getElementById('gold-time-range').textContent = timeRange;
       }
       
       // 准备图表数据
-      const labels = goldData.map(item => new Date(item.t));
+      const labels = goldData.map(item => item.t);
       const prices = goldData.map(item => item.c);
       
       // 计算技术指标
@@ -1021,13 +1068,17 @@
             x: {
               type: 'time',
               time: {
+                unit: 'hour', // 分时图使用小时级单位
                 displayFormats: {
-                  hour: 'MM-dd HH:mm',
-                  day: 'MM-dd'
-                }
+                  hour: 'HH:mm', // 显示格式：13:25
+                  day: 'MM-dd HH:mm' // 跨天时显示日期
+                },
+                tooltipFormat: 'HH:mm' // 提示框时间格式
               },
               ticks: {
-                maxRotation: 0
+                maxRotation: 0, // 防止标签旋转
+                autoSkip: true, // 自动跳过密集时间点
+                maxTicksLimit: 10 // 限制最大刻度数量
               }
             },
             y: {
@@ -1051,14 +1102,14 @@
       // 更新数据统计
       document.getElementById('silver-data-count').textContent = silverData.length;
       if (silverData.length > 0) {
-        const firstTime = new Date(silverData[0].t);
-        const lastTime = new Date(silverData[silverData.length - 1].t);
+        const firstTime = silverData[0].t;
+        const lastTime = silverData[silverData.length - 1].t;
         const timeRange = `${formatDate(firstTime)} - ${formatDate(lastTime)}`;
         document.getElementById('silver-time-range').textContent = timeRange;
       }
       
       // 准备图表数据
-      const labels = silverData.map(item => new Date(item.t));
+      const labels = silverData.map(item => item.t);
       const prices = silverData.map(item => item.c);
       
       // 计算技术指标
@@ -1170,13 +1221,17 @@
             x: {
               type: 'time',
               time: {
+                unit: 'hour', // 分时图使用小时级单位
                 displayFormats: {
-                  hour: 'MM-dd HH:mm',
-                  day: 'MM-dd'
-                }
+                  hour: 'HH:mm', // 显示格式：13:25
+                  day: 'MM-dd HH:mm' // 跨天时显示日期
+                },
+                tooltipFormat: 'HH:mm' // 提示框时间格式
               },
               ticks: {
-                maxRotation: 0
+                maxRotation: 0, // 防止标签旋转
+                autoSkip: true, // 自动跳过密集时间点
+                maxTicksLimit: 10 // 限制最大刻度数量
               }
             },
             y: {
@@ -1214,7 +1269,6 @@
      */
     function formatDate(date, showTime = false) {
       const options = {
-        year: 'numeric',
         month: '2-digit',
         day: '2-digit'
       };
@@ -1222,6 +1276,8 @@
       if (showTime) {
         options.hour = '2-digit';
         options.minute = '2-digit';
+      } else {
+        options.year = 'numeric';
       }
       
       return date.toLocaleString('zh-CN', options).replace(/\//g, '/');
