@@ -75,6 +75,7 @@
                 <a href="#dashboard" class="hover:text-gray-200 transition-colors"><i class="fa fa-dashboard mr-1"></i> 仪表盘</a>
                 <a href="#strategies" class="hover:text-gray-200 transition-colors"><i class="fa fa-lightbulb-o mr-1"></i> 交易策略</a>
                 <a href="#history" class="hover:text-gray-200 transition-colors"><i class="fa fa-history mr-1"></i> 历史数据</a>
+                <a href="#api-test" class="hover:text-gray-200 transition-colors"><i class="fa fa-cogs mr-1"></i> 接口测试</a>
                 <a href="#about" class="hover:text-gray-200 transition-colors"><i class="fa fa-info-circle mr-1"></i> 关于</a>
             </nav>
             
@@ -89,6 +90,7 @@
                 <a href="#dashboard" class="py-2 hover:text-primary transition-colors"><i class="fa fa-dashboard mr-2"></i> 仪表盘</a>
                 <a href="#strategies" class="py-2 hover:text-primary transition-colors"><i class="fa fa-lightbulb-o mr-2"></i> 交易策略</a>
                 <a href="#history" class="py-2 hover:text-primary transition-colors"><i class="fa fa-history mr-2"></i> 历史数据</a>
+                <a href="#api-test" class="py-2 hover:text-primary transition-colors"><i class="fa fa-cogs mr-2"></i> 接口测试</a>
                 <a href="#about" class="py-2 hover:text-primary transition-colors"><i class="fa fa-info-circle mr-2"></i> 关于</a>
             </div>
         </div>
@@ -234,7 +236,7 @@
             
             <!-- 最新策略 -->
             <div class="bg-white rounded-xl p-6 card-shadow border border-gray-100 mb-8">
-                <div class="flex justify-between items-center mb-6"><div class="flex justify-between items-center mb-6">
+                <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-semibold">最新交易建议</h3>
                     <span id="latest-strategy-time" class="text-sm text-gray-500">更新于: 加载中...</span>
                 </div>
@@ -461,12 +463,12 @@
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h4 class="text-sm text-gray-500 mb-1">平均价格</h4>
                         <p id="history-average" class="text-xl font-bold">--</p>
-                        <p class="text-xs text-gray-500">期间平均值</p>
+                        <p class="text-xs text-gray-500 mt-1">期间平均值</p>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h4 class="text-sm text-gray-500 mb-1">价格波动</h4>
                         <p id="history-volatility" class="text-xl font-bold">--</p>
-                        <p class="text-xs text-gray-500">最高-最低</p>
+                        <p class="text-xs text-gray-500 mt-1">最高-最低</p>
                     </div>
                 </div>
                 
@@ -474,6 +476,58 @@
                 <div class="h-[350px]">
                     <div id="history-chart-skeleton" class="h-full w-full skeleton rounded-lg hidden"></div>
                     <canvas id="history-chart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 接口测试区域 -->
+        <section id="api-test" class="mb-10">
+            <h2 class="text-[clamp(1.5rem,3vw,2rem)] font-bold mb-6 flex items-center">
+                <i class="fa fa-cogs text-primary mr-2"></i>接口测试工具
+            </h2>
+            
+            <div class="bg-white rounded-xl p-6 card-shadow border border-gray-100">
+                <p class="text-gray-600 mb-6">使用下方工具测试API连接，验证数据获取功能是否正常</p>
+                
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">实时价格接口</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="btnFetchCurrent" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                <i class="fa fa-refresh mr-1"></i>获取实时黄金白银价格
+                            </button>
+                            <div class="text-sm text-gray-500 self-center">
+                                接口地址: <code class="bg-gray-100 px-2 py-1 rounded">https://precious-metal-analyzer.aoyouios.workers.dev/data</code>
+                            </div>
+                        </div>
+                        <pre id="resultCurrent" class="mt-4 p-4 bg-gray-50 rounded-lg text-sm overflow-x-auto max-h-64">等待点击按钮...</pre>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">历史数据接口</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="btnFetchHistory" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                <i class="fa fa-history mr-1"></i>获取历史数据
+                            </button>
+                            <div class="text-sm text-gray-500 self-center">
+                                接口地址: <code class="bg-gray-100 px-2 py-1 rounded">https://precious-metal-analyzer.aoyouios.workers.dev/history</code>
+                            </div>
+                        </div>
+                        <pre id="resultHistory" class="mt-4 p-4 bg-gray-50 rounded-lg text-sm overflow-x-auto max-h-64">等待点击按钮...</pre>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">交易建议接口</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="btnFetchAdvice" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                <i class="fa fa-lightbulb-o mr-1"></i>获取最新交易建议
+                            </button>
+                            <div class="text-sm text-gray-500 self-center">
+                                接口地址: <code class="bg-gray-100 px-2 py-1 rounded">https://precious-metal-analyzer.aoyouios.workers.dev/advice</code>
+                            </div>
+                        </div>
+                        <pre id="resultAdvice" class="mt-4 p-4 bg-gray-50 rounded-lg text-sm overflow-x-auto max-h-64">等待点击按钮...</pre>
+                    </div>
                 </div>
             </div>
         </section>
@@ -499,8 +553,7 @@
                         
                         <h3 class="text-lg font-semibold mb-4 mt-6">数据来源</h3>
                         <p class="text-gray-700 mb-4">
-                            系统数据来源于全球主要贵金属交易市场，包括伦敦金银市场协会(LBMA)、纽约商品交易所(COMEX)等，
-                            数据每5分钟更新一次，确保用户获取最新的市场信息。
+                            系统数据来源于全球主要贵金属交易市场，数据每5分钟更新一次，确保用户获取最新的市场信息。
                         </p>
                         
                         <h3 class="text-lg font-semibold mb-4 mt-6">免责声明</h3>
@@ -562,6 +615,7 @@
                         <li><a href="#dashboard" class="hover:text-white transition-colors">市场概览</a></li>
                         <li><a href="#strategies" class="hover:text-white transition-colors">交易策略</a></li>
                         <li><a href="#history" class="hover:text-white transition-colors">历史数据</a></li>
+                        <li><a href="#api-test" class="hover:text-white transition-colors">接口测试</a></li>
                         <li><a href="#about" class="hover:text-white transition-colors">关于系统</a></li>
                     </ul>
                 </div>
@@ -587,33 +641,12 @@
         </div>
     </footer>
 
-    <!-- 资源加载失败时的备用脚本 -->
     <script>
-        // 检查关键资源是否加载成功
-        function checkResourceLoad() {
-            // 检查Chart.js是否加载
-            if (typeof Chart === 'undefined') {
-                showStatus('图表库加载失败，正在尝试备用方案...', 'warning');
-                
-                // 加载备用Chart.js资源
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js';
-                script.crossOrigin = 'anonymous';
-                script.integrity = 'sha256-xfC7V6n8pABP8p4G8qXq1QaZ32dXqQpZ7cYkA5t3XcA=';
-                script.onload = function() {
-                    showStatus('图表库备用方案加载成功', 'success');
-                    initCharts(); // 重新初始化图表
-                };
-                script.onerror = function() {
-                    showStatus('图表库加载失败，部分功能可能无法使用', 'error');
-                    document.querySelectorAll('canvas').forEach(canvas => {
-                        const container = canvas.parentElement;
-                        container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><i class="fa fa-exclamation-triangle mr-2"></i>图表无法加载</div>';
-                    });
-                };
-                document.head.appendChild(script);
-            }
-        }
+        // 采用已验证可行的API地址
+        const currentApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/data';
+        const historyApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/history';
+        const adviceApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/advice';
+        const adviceHistoryApi = 'https://precious-metal-analyzer.aoyouios.workers.dev/advice-history';
 
         // 显示状态消息
         function showStatus(message, type) {
@@ -694,59 +727,55 @@
             }
         });
 
-        // 后端API基础URL
-        const API_BASE_URL = 'https://precious-metal-api.aoyouios.workers.dev';
-
-        // 安全的API请求函数
-        async function fetchData(endpoint, options = {}) {
-            // 显示加载状态
-            showStatus(`正在加载${endpoint}数据...`, 'info');
+        // 采用您提供的已验证可行的API调用方式
+        async function fetchApiData(url, resultElementId, loadingMessage = '请求中...') {
+            const resultElement = document.getElementById(resultElementId);
+            resultElement.textContent = loadingMessage;
             
             try {
-                // 请求超时设置
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-                
-                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
-                    ...options,
-                    signal: controller.signal,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    }
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    // 处理HTTP错误
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.message || `请求失败: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                showStatus(`${endpoint}数据加载成功`, 'success');
-                return data;
-            } catch (error) {
-                // 处理各种错误情况
-                if (error.name === 'AbortError') {
-                    showStatus(`请求超时，请稍后重试`, 'error');
-                } else if (error.message.includes('Failed to fetch')) {
-                    showStatus(`网络连接错误，无法获取数据`, 'error');
-                } else {
-                    showStatus(`数据加载失败: ${error.message}`, 'error');
-                }
-                
-                // 尝试使用缓存数据
-                const cachedData = localStorage.getItem(`cache_${endpoint}`);
-                if (cachedData) {
-                    showStatus(`使用缓存的${endpoint}数据`, 'warning');
-                    return JSON.parse(cachedData);
-                }
-                
+                const res = await fetch(url, { method: 'GET' });
+                if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+                const data = await res.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+                return data; // 返回数据供其他功能使用
+            } catch (err) {
+                resultElement.textContent = `请求失败: ${err.message}`;
+                console.error(err);
                 return null;
             }
         }
+
+        // 接口测试按钮事件绑定 - 使用您提供的可靠方式
+        document.getElementById('btnFetchCurrent').addEventListener('click', async () => {
+            const data = await fetchApiData(currentApi, 'resultCurrent');
+            if (data) {
+                const processedData = processPriceData(data);
+                if (processedData) {
+                    renderPriceData(processedData);
+                    renderIndicators(processedData);
+                    showStatus('实时价格数据已更新', 'success');
+                }
+            }
+        });
+
+        document.getElementById('btnFetchHistory').addEventListener('click', async () => {
+            const data = await fetchApiData(historyApi, 'resultHistory');
+            if (data) {
+                // 显示最近5条数据以便查看
+                document.getElementById('resultHistory').textContent = JSON.stringify(
+                    data.gold ? data.gold.slice(-5) : data, null, 2
+                );
+                showStatus('历史数据已加载', 'success');
+            }
+        });
+
+        document.getElementById('btnFetchAdvice').addEventListener('click', async () => {
+            const data = await fetchApiData(adviceApi, 'resultAdvice');
+            if (data) {
+                renderLatestStrategy(data);
+                showStatus('最新交易建议已更新', 'success');
+            }
+        });
 
         // 保存数据到本地缓存
         function cacheData(endpoint, data, ttl = 300000) { // 默认缓存5分钟
@@ -1207,6 +1236,7 @@
             
             // 计算ATR
             const goldATR = calculateATR(priceData.gold.history);
+            const silverATR = calculate
             const silverATR = calculateATR(priceData.silver.history);
             
             document.getElementById('gold-atr').textContent = goldATR.toFixed(2);
@@ -1337,7 +1367,6 @@
                 ? currentPrice + atr * 3 
                 : currentPrice - atr * 3
             ).toFixed(2);
-            ).toFixed(2);
             const longtermSl = (longtermBias === '买入' 
                 ? currentPrice - atr * 1.5 
                 : currentPrice + atr * 1.5
@@ -1430,8 +1459,8 @@
                 // 显示加载骨架屏
                 document.getElementById('history-chart-skeleton').classList.remove('hidden');
                 
-                // 获取历史数据
-                fetchData(`history?metal=${metal}&period=${period}`)
+                // 使用已验证的API调用方式获取历史数据
+                fetchApiData(`${historyApi}?metal=${metal}&period=${period}`, 'resultHistoryTemp')
                     .then(data => {
                         // 隐藏骨架屏
                         document.getElementById('history-chart-skeleton').classList.add('hidden');
@@ -1580,10 +1609,30 @@
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
             // 检查资源加载情况
-            checkResourceLoad();
+            if (typeof Chart === 'undefined') {
+                showStatus('图表库加载失败，正在尝试备用方案...', 'warning');
+                
+                // 加载备用Chart.js资源
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js';
+                script.crossOrigin = 'anonymous';
+                script.integrity = 'sha256-xfC7V6n8pABP8p4G8qXq1QaZ32dXqQpZ7cYkA5t3XcA=';
+                script.onload = function() {
+                    showStatus('图表库备用方案加载成功', 'success');
+                    initCharts(); // 重新初始化图表
+                };
+                script.onerror = function() {
+                    showStatus('图表库加载失败，部分功能可能无法使用', 'error');
+                    document.querySelectorAll('canvas').forEach(canvas => {
+                        const container = canvas.parentElement;
+                        container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><i class="fa fa-exclamation-triangle mr-2"></i>图表无法加载</div>';
+                    });
+                };
+                document.head.appendChild(script);
+            }
             
-            // 加载价格数据
-            fetchData('data')
+            // 使用已验证的API调用方式加载价格数据
+            fetchApiData(currentApi, 'resultCurrentTemp', '初始化价格数据...')
                 .then(data => {
                     if (data) {
                         cacheData('data', data);
@@ -1596,8 +1645,8 @@
                     }
                 });
             
-            // 加载最新策略
-            fetchData('advice')
+            // 使用已验证的API调用方式加载最新策略
+            fetchApiData(adviceApi, 'resultAdviceTemp', '初始化策略数据...')
                 .then(strategy => {
                     if (strategy) {
                         cacheData('advice', strategy);
@@ -1605,8 +1654,8 @@
                     }
                 });
             
-            // 加载策略历史
-            fetchData('advice-history')
+            // 使用已验证的API调用方式加载策略历史
+            fetchApiData(adviceHistoryApi, 'resultHistoryTemp', '初始化历史数据...')
                 .then(history => {
                     if (history) {
                         cacheData('advice-history', history);
@@ -1619,7 +1668,7 @@
             
             // 设置定时刷新（每5分钟）
             setInterval(() => {
-                fetchData('data')
+                fetchApiData(currentApi, 'resultCurrentTemp', '自动更新价格数据...')
                     .then(data => {
                         if (data) {
                             cacheData('data', data);
@@ -1628,6 +1677,7 @@
                                 renderPriceData(processedData);
                                 renderIndicators(processedData);
                                 generateMultiPeriodStrategies(processedData);
+                                showStatus('数据已自动更新', 'success');
                             }
                         }
                     });
@@ -1635,11 +1685,12 @@
                 // 每小时更新一次策略
                 const hour = new Date().getHours();
                 if (hour % 1 === 0) { // 每小时更新一次
-                    fetchData('advice')
+                    fetchApiData(adviceApi, 'resultAdviceTemp', '自动更新策略数据...')
                         .then(strategy => {
                             if (strategy) {
                                 cacheData('advice', strategy);
                                 renderLatestStrategy(strategy);
+                                showStatus('策略已自动更新', 'success');
                             }
                         });
                 }
