@@ -58,4 +58,400 @@
       background: #1d1d1f; 
       color: white; 
       padding: 0.5rem; 
-      border-radius: 4
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 100;
+    }
+    /* 添加缺失的闭合括号和额外样式 */
+    .navbar { border-bottom: 1px solid #e2e2e7; }
+    .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- 导航栏 -->
+  <nav class="navbar bg-apple-card py-4 px-6 md:px-12">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="flex items-center">
+        <i class="fa fa-line-chart text-primary text-2xl mr-3"></i>
+        <h1 class="text-xl font-semibold">聚宝盆贵金属预测系统</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <button class="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition">
+          <i class="fa fa-refresh mr-1"></i> 刷新数据
+        </button>
+        <a href="weixin://wxpay/bizpayurl?pr=example" class="text-neutral hover:text-primary transition">
+          <i class="fa fa-weixin text-xl"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主要内容区 -->
+  <main class="container mx-auto px-4 md:px-12 py-8">
+    <!-- 品种选择器 -->
+    <div class="mb-8 bg-apple-card p-4 rounded-lg card-shadow">
+      <div class="flex flex-wrap gap-3">
+        <button class="px-4 py-2 bg-primary text-white rounded-md">黄金 (AU)</button>
+        <button class="px-4 py-2 bg-apple-light text-neutral rounded-md hover:bg-apple-border transition">白银 (AG)</button>
+        <button class="px-4 py-2 bg-apple-light text-neutral rounded-md hover:bg-apple-border transition">铂金 (PT)</button>
+        <button class="px-4 py-2 bg-apple-light text-neutral rounded-md hover:bg-apple-border transition">钯金 (PD)</button>
+      </div>
+      
+      <div class="mt-4 flex flex-wrap gap-3">
+        <button class="px-3 py-1 bg-primary text-white text-sm rounded-md">日线</button>
+        <button class="px-3 py-1 bg-apple-light text-neutral text-sm rounded-md hover:bg-apple-border transition">周线</button>
+        <button class="px-3 py-1 bg-apple-light text-neutral text-sm rounded-md hover:bg-apple-border transition">月线</button>
+        <button class="px-3 py-1 bg-apple-light text-neutral text-sm rounded-md hover:bg-apple-border transition">4小时</button>
+        <button class="px-3 py-1 bg-apple-light text-neutral text-sm rounded-md hover:bg-apple-border transition">1小时</button>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="mb-8 bg-apple-card p-4 rounded-lg card-shadow">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-medium">黄金价格走势分析</h2>
+        <div class="text-sm text-neutral">
+          最新价格: <span class="text-primary font-medium">￥458.23</span> 
+          <span class="text-success ml-2">+2.34 (0.51%)</span>
+        </div>
+      </div>
+      
+      <div class="line-chart-container">
+        <div class="chart-loading" id="chartLoader">
+          <i class="fa fa-circle-o-notch fa-spin text-primary text-2xl"></i>
+        </div>
+        <canvas id="priceChart"></canvas>
+      </div>
+      
+      <div class="mt-4 flex flex-wrap">
+        <span class="indicator-tag indicator-tooltip" data-tooltip="相对强弱指数，用于判断超买超卖">RSI</span>
+        <span class="indicator-tag indicator-tooltip" data-tooltip="移动平均线，5日周期">MA5</span>
+        <span class="indicator-tag indicator-tooltip" data-tooltip="移动平均线，10日周期">MA10</span>
+        <span class="indicator-tag indicator-tooltip" data-tooltip="移动平均线，20日周期">MA20</span>
+        <span class="indicator-tag indicator-tooltip" data-tooltip="指数移动平均线，50日周期">EMA50</span>
+        <span class="indicator-tag indicator-tooltip" data-tooltip="布林带，用于判断价格波动范围">BOLL</span>
+      </div>
+    </div>
+
+    <!-- 预测结果区域 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- 短期预测 -->
+      <div class="bg-apple-card p-5 rounded-lg card-shadow advice-card">
+        <div class="flex justify-between items-start mb-3">
+          <h3 class="font-medium">短期预测 (1-3天)</h3>
+          <span class="result-tag bg-success text-white">看涨</span>
+        </div>
+        <p class="text-sm text-neutral mb-4">基于技术指标分析，短期内黄金价格有上涨趋势，目标价位462-465元/克。</p>
+        <div class="text-xs text-neutral">
+          <div class="flex justify-between mb-1">
+            <span>准确率</span>
+            <span class="font-medium">78.3%</span>
+          </div>
+          <div class="w-full bg-apple-light rounded-full h-1.5">
+            <div class="bg-success h-1.5 rounded-full" style="width: 78.3%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 中期预测 -->
+      <div class="bg-apple-card p-5 rounded-lg card-shadow advice-card">
+        <div class="flex justify-between items-start mb-3">
+          <h3 class="font-medium">中期预测 (1-2周)</h3>
+          <span class="result-tag bg-pending text-dark">震荡</span>
+        </div>
+        <p class="text-sm text-neutral mb-4">中期来看，黄金价格可能在450-470元/克区间震荡整理，需关注突破方向。</p>
+        <div class="text-xs text-neutral">
+          <div class="flex justify-between mb-1">
+            <span>准确率</span>
+            <span class="font-medium">65.7%</span>
+          </div>
+          <div class="w-full bg-apple-light rounded-full h-1.5">
+            <div class="bg-pending h-1.5 rounded-full" style="width: 65.7%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 长期预测 -->
+      <div class="bg-apple-card p-5 rounded-lg card-shadow advice-card">
+        <div class="flex justify-between items-start mb-3">
+          <h3 class="font-medium">长期预测 (1个月+)</h3>
+          <span class="result-tag bg-success text-white">看涨</span>
+        </div>
+        <p class="text-sm text-neutral mb-4">长期趋势依然向好，受全球经济不确定性影响，黄金作为避险资产有望继续走高。</p>
+        <div class="text-xs text-neutral">
+          <div class="flex justify-between mb-1">
+            <span>准确率</span>
+            <span class="font-medium">82.1%</span>
+          </div>
+          <div class="w-full bg-apple-light rounded-full h-1.5">
+            <div class="bg-success h-1.5 rounded-full" style="width: 82.1%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 交易建议 -->
+    <div class="mb-8 bg-apple-card p-5 rounded-lg card-shadow">
+      <h2 class="text-lg font-medium mb-4">交易策略建议</h2>
+      
+      <div class="model-description">
+        <p class="text-sm mb-3">根据多模型综合分析，当前市场环境下建议采取以下策略：</p>
+        <ul class="text-sm text-neutral list-disc pl-5 space-y-2">
+          <li>短期投资者可在455-457元区间分批建仓，止损位452元</li>
+          <li>中期投资者可逢低吸纳，回调至450元附近增加仓位</li>
+          <li>长期投资者可保持核心仓位不变，不必过分关注短期波动</li>
+          <li>密切关注美联储货币政策动向和地缘政治风险</li>
+        </ul>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <h4 class="font-medium text-sm mb-2">支撑位</h4>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">455.00</span>
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">452.50</span>
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">450.00</span>
+          </div>
+        </div>
+        <div>
+          <h4 class="font-medium text-sm mb-2">压力位</h4>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">460.00</span>
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">463.50</span>
+            <span class="px-3 py-1 bg-apple-light rounded text-sm">466.80</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史数据表格 -->
+    <div class="bg-apple-card p-5 rounded-lg card-shadow mb-8">
+      <h2 class="text-lg font-medium mb-4">近期价格数据</h2>
+      
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr class="bg-apple-light table-header">
+              <th class="px-4 py-2 text-left text-sm font-medium text-neutral border-b">日期</th>
+              <th class="px-4 py-2 text-right text-sm font-medium text-neutral border-b">开盘价</th>
+              <th class="px-4 py-2 text-right text-sm font-medium text-neutral border-b">最高价</th>
+              <th class="px-4 py-2 text-right text-sm font-medium text-neutral border-b">最低价</th>
+              <th class="px-4 py-2 text-right text-sm font-medium text-neutral border-b">收盘价</th>
+              <th class="px-4 py-2 text-right text-sm font-medium text-neutral border-b">涨跌幅</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="hover:bg-apple-light/50 transition">
+              <td class="px-4 py-3 text-sm border-b">2023-06-15</td>
+              <td class="px-4 py-3 text-sm text-right border-b">456.12</td>
+              <td class="px-4 py-3 text-sm text-right border-b">458.76</td>
+              <td class="px-4 py-3 text-sm text-right border-b">455.31</td>
+              <td class="px-4 py-3 text-sm text-right border-b font-medium">458.23</td>
+              <td class="px-4 py-3 text-sm text-right border-b text-success">+0.51%</td>
+            </tr>
+            <tr class="hover:bg-apple-light/50 transition">
+              <td class="px-4 py-3 text-sm border-b">2023-06-14</td>
+              <td class="px-4 py-3 text-sm text-right border-b">454.87</td>
+              <td class="px-4 py-3 text-sm text-right border-b">456.92</td>
+              <td class="px-4 py-3 text-sm text-right border-b">453.65</td>
+              <td class="px-4 py-3 text-sm text-right border-b font-medium">455.89</td>
+              <td class="px-4 py-3 text-sm text-right border-b text-success">+0.22%</td>
+            </tr>
+            <tr class="hover:bg-apple-light/50 transition">
+              <td class="px-4 py-3 text-sm border-b">2023-06-13</td>
+              <td class="px-4 py-3 text-sm text-right border-b">457.12</td>
+              <td class="px-4 py-3 text-sm text-right border-b">457.89</td>
+              <td class="px-4 py-3 text-sm text-right border-b">454.02</td>
+              <td class="px-4 py-3 text-sm text-right border-b font-medium">454.87</td>
+              <td class="px-4 py-3 text-sm text-right border-b text-danger">-0.49%</td>
+            </tr>
+            <tr class="hover:bg-apple-light/50 transition">
+              <td class="px-4 py-3 text-sm border-b">2023-06-12</td>
+              <td class="px-4 py-3 text-sm text-right border-b">455.36</td>
+              <td class="px-4 py-3 text-sm text-right border-b">458.21</td>
+              <td class="px-4 py-3 text-sm text-right border-b">454.98</td>
+              <td class="px-4 py-3 text-sm text-right border-b font-medium">457.12</td>
+              <td class="px-4 py-3 text-sm text-right border-b text-success">+0.39%</td>
+            </tr>
+            <tr class="hover:bg-apple-light/50 transition">
+              <td class="px-4 py-3 text-sm">2023-06-09</td>
+              <td class="px-4 py-3 text-sm text-right">452.15</td>
+              <td class="px-4 py-3 text-sm text-right">456.03</td>
+              <td class="px-4 py-3 text-sm text-right">451.87</td>
+              <td class="px-4 py-3 text-sm text-right font-medium">455.36</td>
+              <td class="px-4 py-3 text-sm text-right text-success">+0.71%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-apple-card border-t border-apple-border py-6 px-6 md:px-12">
+    <div class="container mx-auto text-center text-sm text-neutral">
+      <p>聚宝盆贵金属预测技术工作室自研系统 © 2023</p>
+      <p class="mt-2">作者微信：jubaopen（AUAG）| 风险提示：贵金属投资有风险，入市需谨慎</p>
+    </div>
+  </footer>
+
+  <script>
+    // 页面加载完成后初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+      // 模拟数据加载延迟
+      setTimeout(function() {
+        document.getElementById('chartLoader').style.display = 'none';
+        initPriceChart();
+      }, 1500);
+    });
+
+    // 初始化价格图表
+    function initPriceChart() {
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      
+      // 生成过去30天的日期
+      const dates = [];
+      const today = new Date();
+      for (let i = 30; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(date);
+      }
+      
+      // 生成模拟价格数据
+      const basePrice = 450;
+      const prices = dates.map((date, index) => {
+        // 基础趋势 + 随机波动
+        const trend = index * 0.2;
+        const fluctuation = (Math.random() - 0.5) * 5;
+        return basePrice + trend + fluctuation;
+      });
+      
+      // 计算MA5均线
+      const ma5 = [];
+      for (let i = 0; i < prices.length; i++) {
+        if (i < 4) {
+          ma5.push(null); // 前4天没有MA5数据
+        } else {
+          let sum = 0;
+          for (let j = i - 4; j <= i; j++) {
+            sum += prices[j];
+          }
+          ma5.push(sum / 5);
+        }
+      }
+      
+      // 创建图表
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: '黄金价格',
+              data: prices,
+              borderColor: '#0071e3',
+              backgroundColor: 'rgba(0, 113, 227, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointBackgroundColor: '#0071e3'
+            },
+            {
+              label: 'MA5',
+              data: ma5,
+              borderColor: '#34c759',
+              borderWidth: 1.5,
+              borderDash: [],
+              fill: false,
+              tension: 0.4,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day',
+                displayFormats: {
+                  day: 'MM-dd'
+                }
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              position: 'right',
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return '¥' + value.toFixed(2);
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                boxWidth: 12,
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(29, 29, 31, 0.9)',
+              padding: 10,
+              titleFont: {
+                size: 12
+              },
+              bodyFont: {
+                size: 12
+              },
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += '¥' + context.parsed.y.toFixed(2);
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
